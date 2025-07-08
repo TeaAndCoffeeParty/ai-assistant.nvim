@@ -51,7 +51,7 @@ local function setup_buffers()
 
 	-- 设置初始内容
 	vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
-	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "等待您的问题..." })
+	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "等待您的问题...", "" })
 
 	output_buf.modifiable = false
 	output_buf.readonly = true
@@ -169,16 +169,23 @@ function M.safe_buf_update(lines)
 	end
 
 	local output_buf = vim.bo[state.output_buf]
+	local current_line_count = vim.api.nvim_buf_line_count(state.output_buf)
+
+	-- 如果 lines 是字符串，先转换成 table
+	if type(lines) == "string" then
+		lines = vim.split(lines, "\n")
+	end
+
+	-- 分割每一项中的换行符，并逐行添加
+	local new_lines = {}
+	for _, line in ipairs(lines) do
+		vim.list_extend(new_lines, vim.split(line, "\n"))
+	end
 
 	output_buf.modifiable = true
 	output_buf.readonly = false
 
-	local processed_lines = {}
-	for _, line in ipairs(lines) do
-		vim.list_extend(processed_lines, vim.split(line, "\n"))
-	end
-
-	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, processed_lines)
+	vim.api.nvim_buf_set_lines(state.output_buf, current_line_count, -1, false, new_lines)
 
 	output_buf.modifiable = false
 	output_buf.readonly = true

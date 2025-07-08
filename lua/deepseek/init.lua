@@ -89,7 +89,6 @@ function M.submit_input()
 		table.concat(user_input, "\n"),
 		"",
 		"-------------------",
-		"思考中...",
 	})
 
 	require("deepseek.api").query(prompt, function(response)
@@ -98,12 +97,10 @@ function M.submit_input()
 		end
 
 		window.safe_buf_update({
-			table.concat(user_input, "\n"),
-			"",
-			"--------------------",
 			vim.trim(response),
 			"",
 			"当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"),
+			"-------------------",
 		})
 
 		--清空输入区
