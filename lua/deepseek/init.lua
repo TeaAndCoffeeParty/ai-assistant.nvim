@@ -1,4 +1,5 @@
 local M = {}
+
 local window = require("deepseek.window")
 
 -- 默认配置
@@ -13,6 +14,12 @@ local defaults = {
 		open_chat = "<leader>dc",
 		submit = "<C-Enter>",
 	},
+	config = {
+		api_key = nil,
+		api_url = "https://api.deepseek.com/v1/chat/completions",
+		model = "deepseek-chat",
+		timeout = 30000,
+	},
 }
 
 function M.setup(opts)
@@ -21,15 +28,17 @@ function M.setup(opts)
 
 	-- 如果插件被禁用则返回
 	if not M.config.enabled then
-		vim.notify("My LazyVim 插件已禁用")
+		vim.notify("DeepSeek插件已禁用")
 		return
 	end
+
+	assert(M.config.config.api_key, "DeepSeek API Key 未配置")
 
 	-- 设置快捷键
 	M.setup_keymaps()
 
 	-- 在这里添加你的插件逻辑
-	vim.notify("My LazyVim 插件已加载!")
+	vim.notify("DeepSeek插件已加载!")
 end
 
 -- 设置快捷键函数
@@ -52,11 +61,9 @@ function M.submit_input()
 	local state = window.get_state()
 	-- 获取输入内容
 	local input_lines = vim.api.nvim_buf_get_lines(state.input_buf, 0, -1, false)
-
-	-- 有一行有效数据就算有效
 	local has_content = false
 	for _, line in ipairs(input_lines) do
-		if line ~= "" then
+		if line:match("%S") then
 			has_content = true
 			break
 		end
@@ -67,29 +74,53 @@ function M.submit_input()
 		return
 	end
 
-	local output_content = {
-		"> " .. input_lines[1],
-	}
-	for i = 2, #input_lines do
-		table.insert(output_content, input_lines[i])
+	local prompt = table.concat(input_lines, "\n")
+
+	local user_input = {}
+	for _, line in ipairs(input_lines) do
+		if line ~= "" then
+			table.insert(user_input, "> " .. line)
+		end
 	end
-	table.insert(output_content, "")
-	table.insert(output_content, "------------------")
-	table.insert(output_content, "这是模拟回复 - 实际使用时这里会是 API 返回的内容")
-	table.insert(output_content, "当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))
 
 	--临时允许输出缓冲区修改
 	vim.bo[state.output_buf].modifiable = true
 	vim.bo[state.output_buf].readonly = false
-	-- 模拟回复
-	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, output_content)
+	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, {
+		table.concat(user_input, "\n"),
+		"",
+		"-------------------",
+		"思考中...",
+	})
 
 	vim.bo[state.output_buf].modifiable = false
 	vim.bo[state.output_buf].readonly = true
 
-	--清空输入区
-	vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
-	vim.api.nvim_win_set_cursor(state.input_win, { 1, 0 })
+	require("deepseek.api").query(prompt, function(response)
+		if not (vim.api.nvim_win_is_valid(state.output_win) and vim.api.nvim_buf_is_valid(state.output_buf)) then
+			return
+		end
+
+		vim.bo[state.output_buf].modifiable = true
+		vim.bo[state.output_buf].readonly = false
+
+		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, {
+			table.concat(user_input, "\n"),
+			"",
+			"--------------------",
+			vim.trim(response),
+			"",
+			"当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"),
+		})
+
+		vim.bo[state.output_buf].modifiable = false
+		vim.bo[state.output_buf].readonly = true
+
+		--清空输入区
+		vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
+		vim.api.nvim_win_set_cursor(state.input_win, { 1, 0 })
+		vim.cmd("startinsert!")
+	end)
 end
 
 return M
