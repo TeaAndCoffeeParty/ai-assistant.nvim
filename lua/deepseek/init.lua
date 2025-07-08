@@ -42,52 +42,6 @@ end
 -- 打开聊天窗口
 function M.open_chat_ui()
 	local win_state = window.create(M.config.window)
-
-	M.setup_buffers(win_state)
-
-	vim.api.nvim_set_current_win(win_state.input_win)
-	vim.cmd("startinsert!")
-end
-
-function M.setup_buffers(state)
-	-- 输入缓冲区设置
-	vim.api.nvim_buf_set_option(state.input_buf, "filetype", "markdown")
-	vim.api.nvim_buf_set_option(state.input_buf, "modifiable", true)
-	vim.api.nvim_buf_set_option(state.input_buf, "buftype", "")
-	vim.api.nvim_buf_set_option(state.input_buf, "number", false)
-	vim.api.nvim_buf_set_option(state.input_buf, "relativenumber", false)
-	vim.api.nvim_buf_set_option(state.input_buf, "wrap", true)
-
-	-- 输出缓冲区设置
-	vim.api.nvim_buf_set_option(state.output_buf, "filetype", "markdown")
-	vim.api.nvim_buf_set_option(state.output_buf, "modifiable", true)
-	vim.api.nvim_buf_set_option(state.input_buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(state.output_buf, "number", false)
-	vim.api.nvim_buf_set_option(state.output_buf, "relativenumber", false)
-	vim.api.nvim_buf_set_option(state.output_buf, "wrap", true)
-
-	-- 设置初始内容
-	vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
-	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "等待您的问题..." })
-
-	vim.api.nvim_buf_set_option(state.output_buf, "modifiable", false)
-	vim.api.nvim_buf_set_option(state.output_buf, "readonly", true)
-
-	-- 输入窗口映射
-	vim.api.nvim_buf_set_keymap(
-		state.input_buf,
-		"n",
-		"<Esc>",
-		"<cmd>lua require('deepseek').close_windows()<CR>",
-		{ noremap = true, silent = true, nowait = true, desc = "关闭聊天窗口" }
-	)
-	vim.api.nvim_buf_set_keymap(
-		state.input_buf,
-		"n",
-		"<leader>ds",
-		"<cmd>lua require('deepseek').submit_input()<CR>",
-		{ noremap = true, silent = true, nowait = true, desc = "提交输入" }
-	)
 end
 
 function M.close_windows()
@@ -125,13 +79,13 @@ function M.submit_input()
 	table.insert(output_content, "当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))
 
 	--临时允许输出缓冲区修改
-	vim.api.nvim_buf_set_option(state.output_buf, "modifiable", true)
-	vim.api.nvim_buf_set_option(state.output_buf, "readonly", false)
+	vim.bo[state.output_buf].modifiable = true
+	vim.bo[state.output_buf].readonly = false
 	-- 模拟回复
 	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, output_content)
 
-	vim.api.nvim_buf_set_option(state.output_buf, "modifiable", false)
-	vim.api.nvim_buf_set_option(state.output_buf, "readonly", true)
+	vim.bo[state.output_buf].modifiable = false
+	vim.bo[state.output_buf].readonly = true
 
 	--清空输入区
 	vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })

@@ -22,6 +22,64 @@ local function setup_autocmds()
 	})
 end
 
+local function setup_buffers()
+	local input_buf = vim.bo[state.input_buf]
+	local output_buf = vim.bo[state.output_buf]
+
+	local input_win = vim.wo[state.input_win]
+	local output_win = vim.wo[state.output_win]
+
+	-- 输入缓冲区设置
+	input_buf.buftype = ""
+	input_buf.filetype = "markdown"
+	input_buf.modifiable = true
+	-- 输入窗口设置
+	input_win.number = false
+	input_win.relativenumber = false
+	input_win.wrap = true
+	input_win.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
+
+	-- 输出缓冲区设置
+	output_buf.buftype = "nofile"
+	output_buf.filetype = "markdown"
+	output_buf.modifiable = true
+	-- 输出窗口设置
+	output_win.number = false
+	output_win.relativenumber = false
+	output_win.wrap = true
+	output_win.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
+
+	-- 设置初始内容
+	vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
+	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "等待您的问题..." })
+
+	output_buf.modifiable = false
+	output_buf.readonly = true
+
+	-- 输入窗口映射
+	vim.api.nvim_buf_set_keymap(
+		state.input_buf,
+		"n",
+		"<Esc>",
+		"<cmd>lua require('deepseek').close_windows()<CR>",
+		{ noremap = true, silent = true, nowait = true, desc = "关闭聊天窗口" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.input_buf,
+		"n",
+		"q",
+		"<cmd>lua require('deepseek').close_windows()<CR>",
+		{ noremap = true, silent = true, nowait = true, desc = "关闭聊天窗口" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.input_buf,
+		"n",
+		"<leader>ds",
+		"<cmd>lua require('deepseek').submit_input()<CR>",
+		{ noremap = true, silent = true, nowait = true, desc = "提交输入" }
+	)
+end
+
 -- 打开聊天窗口
 function M.create(config)
 	-- 如果窗口已经存在，则聚焦到输入窗口
@@ -60,14 +118,12 @@ function M.create(config)
 		title_pos = "center",
 	})
 
-	vim.api.nvim_win_set_option(state.input_win, "winhl", "Normal:Normal,FloatBorder:FloatBorder")
-	vim.api.nvim_win_set_option(state.output_win, "winhl", "Normal:Normal,FloatBorder:FloatBorder")
-
-	--	M.setup_buffers()
+	setup_buffers()
 	setup_autocmds()
 
-	--	vim.api.nvim_set_current_win(state.input_win)
-	--	vim.cmd("startinsert!")
+	vim.api.nvim_set_current_win(state.input_win)
+	vim.cmd("startinsert!")
+
 	return state
 end
 
