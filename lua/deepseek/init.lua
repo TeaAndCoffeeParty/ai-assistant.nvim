@@ -78,7 +78,7 @@ function M.open_chat_ui()
 		width = M.config.window.width,
 		height = output_height,
 		col = (vim.o.columns - M.config.window.width) / 2,
-		row = (vim.o.lines - total_height) / 2 + input_height + 1,
+		row = (vim.o.lines - total_height) / 2 + input_height + 2,
 		border = "single",
 		title = "输出区",
 		title_pos = "center",
@@ -86,6 +86,8 @@ function M.open_chat_ui()
 
 	vim.api.nvim_win_set_option(state.input_win, "winhl", "Normal:Normal,FloatBorder:FloatBorder")
 	vim.api.nvim_win_set_option(state.output_win, "winhl", "Normal:Normal,FloatBorder:FloatBorder")
+	vim.api.nvim_set_current_win(state.input_win)
+	vim.cmd("startinsert!")
 
 	M.setup_buffers()
 
@@ -110,7 +112,7 @@ function M.setup_buffers()
 	vim.api.nvim_buf_set_option(state.output_buf, "wrap", true)
 
 	-- 设置初始内容
-	vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "在此输入您的问题..." })
+	vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
 	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "等待您的问题..." })
 
 	vim.api.nvim_buf_set_option(state.output_buf, "modifiable", false)
@@ -126,8 +128,8 @@ function M.setup_buffers()
 	)
 	vim.api.nvim_buf_set_keymap(
 		state.input_buf,
-		"i",
-		"<C-Enter>",
+		"n",
+		"<leader>ds",
 		"<cmd>lua require('deepseek').submit_input()<CR>",
 		{ noremap = true, silent = true, nowait = true, desc = "提交输入" }
 	)
@@ -180,22 +182,39 @@ function M.close_windows()
 end
 
 function M.submit_input()
+	-- 获取输入内容
+	local input_lines = vim.api.nvim_buf_get_lines(state.input_buf, 0, -1, false)
+
+	-- 有一行有效数据就算有效
+	local has_content = false
+	for _, line in ipairs(input_lines) do
+		if line ~= "" then
+			has_content = true
+			break
+		end
+	end
+
+	if not has_content then
+		vim.notify("请输入有效内容", vim.log.levels.WARN)
+		return
+	end
+
+	local output_content = {
+		"> " .. input_lines[1],
+	}
+	for i = 2, #input_lines do
+		table.insert(output_content, input_lines[i])
+	end
+	table.insert(output_content, "")
+	table.insert(output_content, "------------------")
+	table.insert(output_content, "这是模拟回复 - 实际使用时这里会是 API 返回的内容")
+	table.insert(output_content, "当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))
+
 	--临时允许输出缓冲区修改
 	vim.api.nvim_buf_set_option(state.output_buf, "modifiable", true)
 	vim.api.nvim_buf_set_option(state.output_buf, "readonly", false)
-
-	local input_lines = vim.api.nvim_buf_get_lines(state.input_buf, 0, -1, false)
-
 	-- 模拟回复
-	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, {
-		"您输入了：",
-		"",
-		table.concat(input_lines, "\n"),
-		"",
-		"------------------",
-		"这是模拟回复 - 实际使用时这里会是 API 返回的内容",
-		"当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"),
-	})
+	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, output_content)
 
 	vim.api.nvim_buf_set_option(state.output_buf, "modifiable", false)
 	vim.api.nvim_buf_set_option(state.output_buf, "readonly", true)
