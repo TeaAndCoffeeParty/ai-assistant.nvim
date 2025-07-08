@@ -5,8 +5,8 @@ local defaults = {
 	enabled = true,
 	window = {
 		width = 80,
-		height = 20,
-		split_ratio = 0.4,
+		height = 40,
+		split_ratio = 0.2,
 	},
 	keymaps = {
 		open_chat = "<leader>dc",
@@ -62,36 +62,35 @@ function M.open_chat_ui()
 	local input_height = math.floor(total_height * M.config.window.split_ratio)
 	local output_height = total_height - input_height - 1
 
-	state.input_win = vim.api.nvim_open_win(state.input_buf, true, {
-		width = M.config.window.width,
-		relative = "editor",
-		height = input_height,
-		col = (vim.o.columns - M.config.window.width) / 2,
-		row = (vim.o.lines - total_height) / 2,
-		border = "single",
-		title = "输入区（按ESC关闭, Ctrl+Enter 提交）",
-		title_pos = "center",
-	})
-
 	state.output_win = vim.api.nvim_open_win(state.output_buf, true, {
 		relative = "editor",
 		width = M.config.window.width,
 		height = output_height,
 		col = (vim.o.columns - M.config.window.width) / 2,
-		row = (vim.o.lines - total_height) / 2 + input_height + 2,
+		row = (vim.o.lines - total_height) / 2,
 		border = "single",
 		title = "输出区",
+		title_pos = "center",
+	})
+	state.input_win = vim.api.nvim_open_win(state.input_buf, true, {
+		width = M.config.window.width,
+		relative = "editor",
+		height = input_height,
+		col = (vim.o.columns - M.config.window.width) / 2,
+		row = (vim.o.lines - total_height) / 2 + output_height + 2,
+		border = "single",
+		title = "输入区（按ESC关闭, Ctrl+Enter 提交）",
 		title_pos = "center",
 	})
 
 	vim.api.nvim_win_set_option(state.input_win, "winhl", "Normal:Normal,FloatBorder:FloatBorder")
 	vim.api.nvim_win_set_option(state.output_win, "winhl", "Normal:Normal,FloatBorder:FloatBorder")
-	vim.api.nvim_set_current_win(state.input_win)
-	vim.cmd("startinsert!")
 
 	M.setup_buffers()
-
 	M.setup_autocmds()
+
+	vim.api.nvim_set_current_win(state.input_win)
+	vim.cmd("startinsert!")
 end
 
 function M.setup_buffers()
