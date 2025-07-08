@@ -85,28 +85,19 @@ function M.submit_input()
 		end
 	end
 
-	--临时允许输出缓冲区修改
-	vim.bo[state.output_buf].modifiable = true
-	vim.bo[state.output_buf].readonly = false
-	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, {
+	window.safe_buf_update({
 		table.concat(user_input, "\n"),
 		"",
 		"-------------------",
 		"思考中...",
 	})
 
-	vim.bo[state.output_buf].modifiable = false
-	vim.bo[state.output_buf].readonly = true
-
 	require("deepseek.api").query(prompt, function(response)
 		if not (vim.api.nvim_win_is_valid(state.output_win) and vim.api.nvim_buf_is_valid(state.output_buf)) then
 			return
 		end
 
-		vim.bo[state.output_buf].modifiable = true
-		vim.bo[state.output_buf].readonly = false
-
-		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, {
+		window.safe_buf_update({
 			table.concat(user_input, "\n"),
 			"",
 			"--------------------",
@@ -114,9 +105,6 @@ function M.submit_input()
 			"",
 			"当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"),
 		})
-
-		vim.bo[state.output_buf].modifiable = false
-		vim.bo[state.output_buf].readonly = true
 
 		--清空输入区
 		vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })

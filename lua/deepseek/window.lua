@@ -163,4 +163,25 @@ function M.get_state()
 	return state
 end
 
+function M.safe_buf_update(lines)
+	if not vim.api.nvim_buf_is_valid(state.output_buf) then
+		return
+	end
+
+	local output_buf = vim.bo[state.output_buf]
+
+	output_buf.modifiable = true
+	output_buf.readonly = false
+
+	local processed_lines = {}
+	for _, line in ipairs(lines) do
+		vim.list_extend(processed_lines, vim.split(line, "\n"))
+	end
+
+	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, processed_lines)
+
+	output_buf.modifiable = false
+	output_buf.readonly = true
+end
+
 return M
