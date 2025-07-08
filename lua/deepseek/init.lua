@@ -14,17 +14,15 @@ local defaults = {
 		open_chat = "<leader>dc",
 		submit = "<C-Enter>",
 	},
-	config = {
-		api_key = nil,
-		api_url = "https://api.deepseek.com/v1/chat/completions",
-		model = "deepseek-chat",
-		timeout = 30000,
-	},
 }
 
 function M.setup(opts)
 	-- 合并默认配置和用户配置
-	M.config = vim.tbl_deep_extend("force", defaults, opts or {})
+	M.config = vim.tbl_deep_extend("force", {
+		api_url = "https://api.deepseek.com/v1/chat/completions",
+		model = "deepseek-chat",
+		timeout = 30000,
+	}, defaults, opts or {})
 
 	-- 如果插件被禁用则返回
 	if not M.config.enabled then
@@ -32,7 +30,11 @@ function M.setup(opts)
 		return
 	end
 
-	assert(M.config.config.api_key, "DeepSeek API Key 未配置")
+	-- 关键配置验证
+	assert(
+		type(M.config.api_key) == "string" and #M.config.api_key > 0,
+		"必须配置 DeepSeek API Key (通过 setup() 或环境变量 DEEPSEEK_API_KEY)"
+	)
 
 	-- 设置快捷键
 	M.setup_keymaps()
