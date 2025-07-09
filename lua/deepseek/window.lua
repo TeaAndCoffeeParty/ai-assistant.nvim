@@ -17,9 +17,10 @@ local function setup_buffers()
 	local output_win = vim.wo[state.output_win]
 
 	-- 输入缓冲区设置
-	input_buf.buftype = ""
+	input_buf.buftype = "nofile"
 	input_buf.filetype = "markdown"
 	input_buf.modifiable = true
+	input_buf.bufhidden = "wipe"
 	-- 输入窗口设置
 	input_win.number = false
 	input_win.relativenumber = false
@@ -30,6 +31,7 @@ local function setup_buffers()
 	output_buf.buftype = "nofile"
 	output_buf.filetype = "markdown"
 	output_buf.modifiable = true
+	output_buf.bufhidden = "wipe"
 	-- 输出窗口设置
 	output_win.number = false
 	output_win.relativenumber = false
