@@ -9,20 +9,6 @@ local state = {
 	cached_content = nil,
 }
 
-local function setup_autocmds()
-	vim.api.nvim_create_autocmd("BufWipeout", {
-		buffer = state.input_buf,
-		callback = function()
-			if state.input_win and vim.api.nvim_win_is_valid(state.input_win) then
-				vim.api.nvim_win_close(state.input_win, true)
-			end
-			if state.output_win and vim.api.nvim_win_is_valid(state.output_win) then
-				vim.api.nvim_win_close(state.output_win, true)
-			end
-		end,
-	})
-end
-
 local function setup_buffers()
 	local input_buf = vim.bo[state.input_buf]
 	local output_buf = vim.bo[state.output_buf]
@@ -128,7 +114,6 @@ function M.create(config)
 	})
 
 	setup_buffers()
-	--	setup_autocmds()
 
 	vim.api.nvim_set_current_win(state.input_win)
 	vim.cmd("startinsert!")
