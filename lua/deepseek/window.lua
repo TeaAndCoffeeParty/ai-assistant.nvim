@@ -6,6 +6,7 @@ local state = {
 	output_win = nil,
 	input_buf = nil,
 	output_buf = nil,
+	cached_content = nil,
 }
 
 local function setup_autocmds()
@@ -50,9 +51,13 @@ local function setup_buffers()
 	output_win.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
 
 	-- 设置初始内容
-	vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
-	vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "等待您的问题...", "" })
-
+	if state.cached_content then
+		vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, state.cached_content.input_buf)
+		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, state.cached_content.output_buf)
+	else
+		vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
+		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "等待您的问题...", "" })
+	end
 	output_buf.modifiable = false
 	output_buf.readonly = true
 
@@ -89,8 +94,12 @@ function M.create(config)
 	end
 
 	-- 创建两个缓冲区
-	state.input_buf = vim.api.nvim_create_buf(false, true)
-	state.output_buf = vim.api.nvim_create_buf(false, true)
+	if not state.output_buf or not vim.api.nvim_buf_is_valid(state.output_buf) then
+		state.output_buf = vim.api.nvim_create_buf(false, true)
+	end
+	if not state.input_buf or not vim.api.nvim_buf_is_valid(state.input_buf) then
+		state.input_buf = vim.api.nvim_create_buf(false, true)
+	end
 
 	local total_height = config.height
 	local input_height = math.floor(total_height * config.split_ratio)
@@ -119,7 +128,7 @@ function M.create(config)
 	})
 
 	setup_buffers()
-	setup_autocmds()
+	--	setup_autocmds()
 
 	vim.api.nvim_set_current_win(state.input_win)
 	vim.cmd("startinsert!")
@@ -134,6 +143,16 @@ function M.close()
 		vim.cmd("wincmd p")
 	end
 
+	if state.input_buf and vim.api.nvim_buf_is_valid(state.input_buf) then
+		state.cached_content = {
+			input_buf = vim.api.nvim_buf_get_lines(state.input_buf, 0, -1, false),
+			output_buf = state.output_buf
+					and vim.api.nvim_buf_is_valid(state.output_buf)
+					and vim.api.nvim_buf_get_lines(state.output_buf, 0, -1, false)
+				or {},
+		}
+	end
+
 	if state.input_win and vim.api.nvim_win_is_valid(state.input_win) then
 		vim.api.nvim_win_close(state.input_win, true)
 	end
@@ -141,22 +160,10 @@ function M.close()
 		vim.api.nvim_win_close(state.output_win, true)
 	end
 
-	vim.defer_fn(function()
-		if state.input_buf and vim.api.nvim_buf_is_valid(state.input_buf) then
-			pcall(vim.api.nvim_buf_delete, state.input_buf, { force = true })
-		end
-		if state.output_buf and vim.api.nvim_buf_is_valid(state.output_buf) then
-			pcall(vim.api.nvim_buf_delete, state.output_buf, { force = true })
-		end
+	state.input_win = nil
+	state.output_win = nil
 
-		state = {
-			input_win = nil,
-			output_win = nil,
-			input_buf = nil,
-			output_buf = nil,
-		}
-		vim.notify("DeepSeek窗口已关闭", vim.log.levels.INFO)
-	end, 50)
+	vim.notify("DeepSeek窗口已关闭", vim.log.levels.INFO)
 end
 
 function M.get_state()
@@ -164,7 +171,7 @@ function M.get_state()
 end
 
 function M.safe_buf_update(lines)
-	if not vim.api.nvim_buf_is_valid(state.output_buf) then
+	if not (vim.api.nvim_win_is_valid(state.output_win) and vim.api.nvim_buf_is_valid(state.output_buf)) then
 		return
 	end
 
@@ -189,6 +196,36 @@ function M.safe_buf_update(lines)
 
 	output_buf.modifiable = false
 	output_buf.readonly = true
+end
+
+function M.get_input()
+	local input_lines = vim.api.nvim_buf_get_lines(state.input_buf, 0, -1, false)
+	local has_content = false
+	for _, line in ipairs(input_lines) do
+		if line:match("%S") then
+			has_content = true
+			break
+		end
+	end
+
+	if not has_content then
+		vim.notify("请输入有效内容", vim.log.levels.WARN)
+		return nil
+	end
+
+	local prompt = table.concat(input_lines, "\n")
+
+	local display_lines = {}
+	for _, line in ipairs(input_lines) do
+		if line ~= "" then
+			table.insert(display_lines, "> " .. line)
+		end
+	end
+
+	return {
+		prompt = prompt,
+		display_lines = display_lines,
+	}
 end
 
 return M

@@ -61,41 +61,18 @@ end
 
 function M.submit_input()
 	local state = window.get_state()
-	-- 获取输入内容
-	local input_lines = vim.api.nvim_buf_get_lines(state.input_buf, 0, -1, false)
-	local has_content = false
-	for _, line in ipairs(input_lines) do
-		if line:match("%S") then
-			has_content = true
-			break
-		end
-	end
-
-	if not has_content then
-		vim.notify("请输入有效内容", vim.log.levels.WARN)
+	local user_input = window.get_input()
+	if not user_input then
 		return
 	end
 
-	local prompt = table.concat(input_lines, "\n")
-
-	local user_input = {}
-	for _, line in ipairs(input_lines) do
-		if line ~= "" then
-			table.insert(user_input, "> " .. line)
-		end
-	end
-
 	window.safe_buf_update({
-		table.concat(user_input, "\n"),
+		table.concat(user_input.display_lines, "\n"),
 		"",
 		"-------------------",
 	})
 
-	require("deepseek.api").query(prompt, function(response)
-		if not (vim.api.nvim_win_is_valid(state.output_win) and vim.api.nvim_buf_is_valid(state.output_buf)) then
-			return
-		end
-
+	require("deepseek.api").query(user_input.prompt, function(response)
 		window.safe_buf_update({
 			vim.trim(response),
 			"",
