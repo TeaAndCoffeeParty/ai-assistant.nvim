@@ -66,25 +66,37 @@ function M.submit_input()
 		return
 	end
 
-	window.safe_buf_update({
-		table.concat(user_input.display_lines, "\n"),
-		"",
-		"-------------------",
+	vim.bo[state.output_buf].filetype = "text"
+
+	window.safe_buf_update(table.concat(user_input.display_lines, "\n\n"))
+	window.safe_buf_update("\n-------------------\n")
+
+	local full_response = ""
+
+	require("deepseek.api").query_stream(user_input.prompt, {
+		on_data = function(content)
+			if content then
+				full_response = full_response .. content
+				window.safe_buf_update(content)
+			end
+		end,
+		on_finish = function()
+			window.safe_buf_update("\n\n当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))
+			window.safe_buf_update("\n\n-------------------\n")
+			--清空输入区
+			vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
+			vim.api.nvim_win_set_cursor(state.input_win, { 1, 0 })
+			vim.cmd("startinsert!")
+			vim.bo[state.output_buf].filetype = "markdown"
+		end,
+		on_error = function(err)
+			window.safe_buf_update("\n\n[ERROR] " .. tostring(err))
+			window.safe_buf_update("\n当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))
+			window.safe_buf_update("\n\n-------------------\n")
+			vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
+			vim.bo[state.output_buf].filetype = "markdown"
+		end,
 	})
-
-	require("deepseek.api").query(user_input.prompt, function(response)
-		window.safe_buf_update({
-			vim.trim(response),
-			"",
-			"当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"),
-			"-------------------",
-		})
-
-		--清空输入区
-		vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
-		vim.api.nvim_win_set_cursor(state.input_win, { 1, 0 })
-		vim.cmd("startinsert!")
-	end)
 end
 
 return M

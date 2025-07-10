@@ -2,6 +2,7 @@ local curl = require("plenary.curl")
 local json = vim.json
 
 local api = {}
+local default_timeout = 60000
 
 function api.query(prompt, callback)
 	local config = require("deepseek").config or {}
@@ -31,7 +32,7 @@ function api.query(prompt, callback)
 			["Authorization"] = "Bearer " .. config.api_key,
 		},
 		body = json.encode(request_data),
-		timeout = config.timeout or 30000,
+		timeout = config.timeout or default_timeout,
 	})
 
 	-- 错误处理
@@ -62,6 +63,85 @@ function api.query(prompt, callback)
 	end
 
 	callback(result.choices[1].message.content)
+end
+
+function api.query_stream(prompt, callbacks)
+	local config = require("deepseek").config or {}
+
+	if not config.api_key then
+		vim.notify("DeepSeek API key 未配置", vim.log.levels.ERROR)
+		return
+	end
+
+	-- 调试信息
+	print("Starting stream request to:", config.api_url)
+
+	local cmd = {
+		"curl",
+		"-sN",
+		"--no-buffer",
+		"-X",
+		"POST",
+		"-H",
+		"Content-Type: application/json",
+		"-H",
+		"Authorization: Bearer " .. config.api_key,
+		"-H",
+		"Accept: text/event-stream",
+		"-H",
+		"Connection: keep-alive",
+		"--write-out",
+		"HTTP_STATUS:%{http_code}",
+		"--data",
+		json.encode({
+			model = config.model,
+			messages = { { role = "user", content = prompt } },
+			stream = true,
+		}),
+		config.api_url,
+	}
+
+	local full_response = ""
+	local job_id = vim.fn.jobstart(cmd, {
+		stdout_buffered = false,
+		on_stdout = function(_, data, _)
+			for _, line in ipairs(data) do
+				if line:find("^data: ") then
+					local chunk = line:sub(6)
+					if chunk == "[DONE]" then
+						print("Received DONE signal") -- 调试
+						vim.schedule(callbacks.on_finish)
+					else
+						local ok, json_data = pcall(vim.json.decode, chunk)
+						if ok and json_data.choices then
+							callbacks.on_data(json_data.choices[1].delta.content or "")
+						end
+					end
+				elseif line:find("HTTP_STATUS:") then
+					print("HTTP Status:", line) --调试状态码
+				end
+			end
+		end,
+		on_exit = function(_, code, signal)
+			print("Job exited. Code:", code, "Signal:", signal) -- 关键调试信息
+			vim.schedule(function()
+				if code == 0 then
+					callbacks.on_finish()
+				else
+					callbacks.on_error("curl exited with code " .. code)
+				end
+			end)
+		end,
+	})
+
+	-- 超时保险
+	vim.defer_fn(function()
+		if vim.fn.jobwait({ job_id }, 0)[1] == -1 then
+			print("Force stopping job due to timeout")
+			vim.fn.jobstop(job_id)
+			callbacks.on_error("REquest timeout")
+		end
+	end, config.timeout or default_timeout)
 end
 
 return api

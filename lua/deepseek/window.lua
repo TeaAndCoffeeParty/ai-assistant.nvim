@@ -18,7 +18,7 @@ local function setup_buffers()
 
 	-- 输入缓冲区设置
 	input_buf.buftype = "nofile"
-	input_buf.filetype = "markdown"
+	input_buf.filetype = "text"
 	input_buf.modifiable = true
 	input_buf.bufhidden = "wipe"
 	-- 输入窗口设置
@@ -32,6 +32,7 @@ local function setup_buffers()
 	output_buf.filetype = "markdown"
 	output_buf.modifiable = true
 	output_buf.bufhidden = "wipe"
+	output_buf.syntax = "off"
 	-- 输出窗口设置
 	output_win.number = false
 	output_win.relativenumber = false
@@ -171,34 +172,6 @@ function M.get_state()
 	return state
 end
 
-function M.safe_buf_update(lines)
-	if not (vim.api.nvim_win_is_valid(state.output_win) and vim.api.nvim_buf_is_valid(state.output_buf)) then
-		return
-	end
-
-	local output_buf = vim.bo[state.output_buf]
-	local current_line_count = vim.api.nvim_buf_line_count(state.output_buf)
-
-	-- 如果 lines 是字符串，先转换成 table
-	if type(lines) == "string" then
-		lines = vim.split(lines, "\n")
-	end
-
-	-- 分割每一项中的换行符，并逐行添加
-	local new_lines = {}
-	for _, line in ipairs(lines) do
-		vim.list_extend(new_lines, vim.split(line, "\n"))
-	end
-
-	output_buf.modifiable = true
-	output_buf.readonly = false
-
-	vim.api.nvim_buf_set_lines(state.output_buf, current_line_count, -1, false, new_lines)
-
-	output_buf.modifiable = false
-	output_buf.readonly = true
-end
-
 function M.get_input()
 	local input_lines = vim.api.nvim_buf_get_lines(state.input_buf, 0, -1, false)
 	local has_content = false
@@ -227,6 +200,67 @@ function M.get_input()
 		prompt = prompt,
 		display_lines = display_lines,
 	}
+end
+
+function M.safe_buf_update(content)
+	if not (vim.api.nvim_win_is_valid(state.output_win) and vim.api.nvim_buf_is_valid(state.output_buf)) then
+		return
+	end
+
+	local output_buf = vim.bo[state.output_buf]
+	local current_lines = vim.api.nvim_buf_get_lines(state.output_buf, 0, -1, false)
+
+	-- 如果 lines 是字符串，先转换成 table
+	if type(content) == "string" then
+		content = { content }
+	end
+
+	-- 启用修改
+	output_buf.modifiable = true
+	output_buf.readonly = false
+
+	-- 如果缓冲区为空，直接添加所有行
+	if #current_lines == 0 then
+		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, content)
+	else
+		-- 获取最后一行
+		local last_line = current_lines[#current_lines] or ""
+
+		-- 处理新内容
+		for _, line in ipairs(content) do
+			-- 如果有换行符，则分割处理
+			if line:find("\n") then
+				local split_lines = vim.split(line, "\n")
+
+				-- 第一部分追加到最后一行
+				if split_lines[1] ~= "" then
+					last_line = last_line .. split_lines[1]
+					current_lines[#current_lines] = last_line
+				end
+
+				-- 剩余部分作为新行
+				for i = 2, #split_lines do
+					table.insert(current_lines, split_lines[i])
+					last_line = split_lines[i]
+				end
+			else
+				-- 没有换行符，直接追加到最后一行
+				last_line = last_line .. line
+				current_lines[#current_lines] = last_line
+			end
+		end
+
+		-- 更新整个缓冲区
+		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, current_lines)
+	end
+
+	-- 禁用修改
+	output_buf.modifiable = false
+	output_buf.readonly = true
+
+	-- 滚动到最底部
+	local line_count = vim.api.nvim_buf_line_count(state.output_buf)
+	vim.api.nvim_win_set_cursor(state.output_win, { line_count, 0 })
 end
 
 return M
