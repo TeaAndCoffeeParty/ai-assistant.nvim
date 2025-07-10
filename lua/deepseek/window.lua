@@ -71,6 +71,20 @@ local function setup_buffers()
 		"<cmd>lua require('deepseek').submit_input()<CR>",
 		{ noremap = true, silent = true, nowait = true, desc = "提交输入" }
 	)
+	vim.api.nvim_buf_set_keymap(
+		state.input_buf,
+		"i",
+		"<CR>",
+		"<cmd>lua require('deepseek').submit_input()<CR>",
+		{ noremap = true, silent = true, nowait = true, desc = "提交输入" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.input_buf,
+		"i",
+		"<S-CR>",
+		"<CR>",
+		{ noremap = true, silent = true, nowait = true, desc = "插入新行" }
+	)
 end
 
 -- 打开聊天窗口
@@ -111,7 +125,7 @@ function M.create(config)
 		col = (vim.o.columns - config.width) / 2,
 		row = (vim.o.lines - total_height) / 2 + output_height + 2,
 		border = "single",
-		title = "输入区（按ESC关闭, Ctrl+Enter 提交）",
+		title = "输入区（按ESC关闭, Enter 提交,Ctrl+J换行）",
 		title_pos = "center",
 	})
 
