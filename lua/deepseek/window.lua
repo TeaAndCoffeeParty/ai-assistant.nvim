@@ -202,6 +202,13 @@ function M.get_input()
 	}
 end
 
+function M.echo_user_input(input)
+	vim.bo[state.output_buf].filetype = "text"
+
+	M.safe_buf_update(table.concat(input, "\n\n"))
+	M.safe_buf_update("\n-------------------\n")
+end
+
 function M.safe_buf_update(content)
 	if not (vim.api.nvim_win_is_valid(state.output_win) and vim.api.nvim_buf_is_valid(state.output_buf)) then
 		return

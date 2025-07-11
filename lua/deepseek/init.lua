@@ -1,24 +1,15 @@
-local M = {}
+local M = {
+	chat_history = {},
+	current_session_id = nil,
+}
 
 local window = require("deepseek.window")
-
--- 默认配置
-local defaults = {
-	enabled = true,
-	window = {
-		width = 80,
-		height = 40,
-		split_ratio = 0.2,
-	},
-	keymaps = {
-		open_chat = "<leader>dc",
-		submit = "<C-Enter>",
-	},
-}
+local config = require("deepseek.config")
+M.config = config.config -- 引用配置表
 
 function M.setup(opts)
 	-- 合并默认配置和用户配置
-	M.config = vim.tbl_deep_extend("force", {}, defaults, opts or {})
+	M.config = vim.tbl_deep_extend("force", {}, config.defaults, opts or {})
 
 	-- 如果插件被禁用则返回
 	if not M.config.enabled then
@@ -34,15 +25,28 @@ function M.setup(opts)
 	assert(M.config.api_url, "必须配置 api_url")
 	assert(M.config.model, "必须配置 model")
 
-	-- 设置快捷键
-	M.setup_keymaps()
+	-- 设置快捷键,命令
+	M.setup_commands()
 
 	-- 在这里添加你的插件逻辑
 	vim.notify("DeepSeek插件已加载!")
 end
 
 -- 设置快捷键函数
-function M.setup_keymaps()
+function M.setup_commands()
+	vim.api.nvim_create_user_command("DeepSeekClearHistory", function()
+		M.chat_history = {}
+		vim.notify("对话历史已清空")
+	end, {})
+
+	vim.api.nvim_create_user_command("DeepSeekShowHistory", function()
+		print(vim.inspect(M.chat_history))
+	end, {})
+
+	vim.api.nvim_create_user_command("DeepSeek", function()
+		M.open_chat_ui()
+	end, {})
+
 	vim.keymap.set("n", M.config.keymaps.open_chat, function()
 		M.open_chat_ui()
 	end, { desc = "打开 DeepSeek 聊天窗口" })
@@ -64,14 +68,25 @@ function M.submit_input()
 		return
 	end
 
-	vim.bo[state.output_buf].filetype = "text"
+	--	local user_content = table.concat(user_input.display_lines, "\n")
+	table.insert(M.chat_history, {
+		role = "user",
+		content = user_input.prompt,
+		time = os.date("%Y-%m-%d %H:%M:%S"),
+	})
 
-	window.safe_buf_update(table.concat(user_input.display_lines, "\n\n"))
-	window.safe_buf_update("\n-------------------\n")
+	window.echo_user_input(user_input.display_lines)
 
 	local full_response = ""
+	local messages = {}
+	for i = math.max(1, #M.chat_history - 10), #M.chat_history do
+		table.insert(messages, {
+			role = M.chat_history[i].role,
+			content = M.chat_history[i].content,
+		})
+	end
 
-	require("deepseek.api").query_stream(user_input.prompt, {
+	require("deepseek.api").query_stream(messages, {
 		on_data = function(content)
 			if content then
 				full_response = full_response .. content
@@ -79,6 +94,12 @@ function M.submit_input()
 			end
 		end,
 		on_finish = function()
+			table.insert(M.chat_history, {
+				role = "assistant",
+				content = full_response,
+				time = os.date("%Y-%m-%d %H:%M:%S"),
+			})
+
 			window.safe_buf_update("\n\n当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))
 			window.safe_buf_update("\n\n-------------------\n")
 			--清空输入区
@@ -95,6 +116,26 @@ function M.submit_input()
 			vim.bo[state.output_buf].filetype = "markdown"
 		end,
 	})
+end
+
+function M.save_history()
+	local history_path = vim.fn.stdpath("data") .. "/deepseek_history.json"
+	local data = {
+		sessions = {
+			[M.current_session_id or "default"] = M.chat_history,
+		},
+	}
+	vim.fn.writefile({ vim.fn.json_encode(data) }, history_path)
+end
+
+function M.load_history()
+	local history_path = vim.fn.stdpath("data") .. "/deepseek_history.json"
+	if vim.fn.filereadable(history_path) == 1 then
+		local data = vim.fn.json_decode(vim.fn.readfile(history_path))
+		if data.sessions and data.sessions[M.current_session_id or "default"] then
+			M.chat_history = data.sessions[M.current_session_id or "default"]
+		end
+	end
 end
 
 return M

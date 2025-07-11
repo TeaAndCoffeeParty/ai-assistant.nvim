@@ -65,7 +65,7 @@ function api.query(prompt, callback)
 	callback(result.choices[1].message.content)
 end
 
-function api.query_stream(prompt, callbacks)
+function api.query_stream(messages, callbacks)
 	local config = require("deepseek").config or {}
 
 	if not config.api_key then
@@ -95,7 +95,7 @@ function api.query_stream(prompt, callbacks)
 		"--data",
 		json.encode({
 			model = config.model,
-			messages = { { role = "user", content = prompt } },
+			messages = messages,
 			stream = true,
 		}),
 		config.api_url,
