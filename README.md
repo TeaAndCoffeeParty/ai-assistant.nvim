@@ -10,8 +10,7 @@ return {
   opts = {
     enabled = true,
     window = { width = 100, height = 40, split_ratio = 0.2 },
-    api_key = os.getenv("DEEPSEEK_API_KEY"),
-    model = "deepseek-chat",
+    select_model = "aliyun_qwen", -- model list "google_gemini", "aliyun_qwen", "deepseek"
     timeout = 60000,
   },
   dependencies = {
@@ -22,4 +21,3 @@ return {
   end,
 }
 ```
-

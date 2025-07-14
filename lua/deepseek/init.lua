@@ -5,11 +5,10 @@ local M = {
 
 local window = require("deepseek.window")
 local config = require("deepseek.config")
-M.config = config.config -- 引用配置表
 
 function M.setup(opts)
 	-- 合并默认配置和用户配置
-	M.config = vim.tbl_deep_extend("force", {}, config.defaults, opts or {})
+	M.config = config.setup(opts)
 
 	-- 如果插件被禁用则返回
 	if not M.config.enabled then
@@ -17,13 +16,19 @@ function M.setup(opts)
 		return
 	end
 
+	local model_config, err = config.get_model()
+
+	if err or not model_config then
+		error("获取模型配置失败: " .. (err or "未知错误"))
+	end
+
 	-- 关键配置验证
 	assert(
-		type(M.config.api_key) == "string" and #M.config.api_key > 0,
+		type(model_config.api_key) == "string" and #model_config.api_key > 0,
 		"必须配置 DeepSeek API Key (通过 setup() 或环境变量 DEEPSEEK_API_KEY)"
 	)
-	assert(M.config.api_url, "必须配置 api_url")
-	assert(M.config.model, "必须配置 model")
+	assert(model_config.api_url, "必须配置 api_url")
+	assert(model_config.model, "必须配置 model")
 
 	-- 设置快捷键,命令
 	M.setup_commands()

@@ -5,15 +5,15 @@ local api = {}
 local default_timeout = 60000
 
 function api.query(prompt, callback)
-	local config = require("deepseek").config or {}
+	local model = require("deepseek").config.get_model
 
-	if not config.api_key then
+	if not model.api_key then
 		vim.notify("DeepSeek API key 未配置", vim.log.levels.ERROR)
 		return
 	end
 
 	local request_data = {
-		model = config.model or "deepseek-chat",
+		model = model.model or "deepseek-chat",
 		messages = {
 			{
 				role = "user",
@@ -25,14 +25,14 @@ function api.query(prompt, callback)
 	}
 
 	local ok, response = pcall(curl.request, {
-		url = config.api_url or "https://api.deepseek.com/v1/chat/completions",
+		url = model.api_url or "https://api.deepseek.com/v1/chat/completions",
 		method = "POST",
 		headers = {
 			["Content-Type"] = "application/json",
-			["Authorization"] = "Bearer " .. config.api_key,
+			["Authorization"] = "Bearer " .. model.api_key,
 		},
 		body = json.encode(request_data),
-		timeout = config.timeout or default_timeout,
+		timeout = model.timeout or default_timeout,
 	})
 
 	-- 错误处理
@@ -66,15 +66,15 @@ function api.query(prompt, callback)
 end
 
 function api.query_stream(messages, callbacks)
-	local config = require("deepseek").config or {}
+	local model = require("deepseek.config").get_model()
 
-	if not config.api_key then
+	if not model or not model.api_key then
 		vim.notify("DeepSeek API key 未配置", vim.log.levels.ERROR)
 		return
 	end
 
 	-- 调试信息
-	print("Starting stream request to:", config.api_url)
+	print("Starting stream request to:", model.api_url)
 
 	local cmd = {
 		"curl",
@@ -85,7 +85,7 @@ function api.query_stream(messages, callbacks)
 		"-H",
 		"Content-Type: application/json",
 		"-H",
-		"Authorization: Bearer " .. config.api_key,
+		"Authorization: Bearer " .. model.api_key,
 		"-H",
 		"Accept: text/event-stream",
 		"-H",
@@ -94,11 +94,11 @@ function api.query_stream(messages, callbacks)
 		"HTTP_STATUS:%{http_code}",
 		"--data",
 		json.encode({
-			model = config.model,
+			model = model.model,
 			messages = messages,
 			stream = true,
 		}),
-		config.api_url,
+		model.api_url,
 	}
 
 	local full_response = ""
@@ -141,7 +141,7 @@ function api.query_stream(messages, callbacks)
 			vim.fn.jobstop(job_id)
 			callbacks.on_error("REquest timeout")
 		end
-	end, config.timeout or default_timeout)
+	end, model.timeout or default_timeout)
 end
 
 return api
