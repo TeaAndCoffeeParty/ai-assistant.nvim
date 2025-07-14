@@ -14,8 +14,8 @@ M.defaults = {
 	apis = {
 		google_gemini = {
 			api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-			api_key = os.getenv("GOOGLE_API_KEY"),
-			model = "gemini-2.5-pro",
+			api_key = os.getenv("GEMINI_API_KEY"),
+			model = "gemini-2.5-flash",
 		},
 		aliyun_qwen = {
 			api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
