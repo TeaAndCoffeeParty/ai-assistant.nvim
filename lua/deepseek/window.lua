@@ -21,6 +21,8 @@ local function setup_buffers()
 	input_buf.filetype = "text"
 	input_buf.modifiable = true
 	input_buf.bufhidden = "wipe"
+	vim.opt_local.spell = false
+
 	-- 输入窗口设置
 	input_win.number = false
 	input_win.relativenumber = false
@@ -33,6 +35,8 @@ local function setup_buffers()
 	output_buf.modifiable = true
 	output_buf.bufhidden = "wipe"
 	output_buf.syntax = "off"
+	vim.api.nvim_buf_set_option(state.input_buf, "spell", false)
+
 	-- 输出窗口设置
 	output_win.number = false
 	output_win.relativenumber = false
@@ -88,6 +92,17 @@ local function setup_buffers()
 	)
 end
 
+local function setup_autocmd()
+	vim.api.nvim_create_autocmd("FileType", {
+		pattern = { "markdown", "text" },
+		callback = function()
+			if vim.api.nvim_get_current_buf() == state.output_buf then
+				vim.opt_local.spell = false
+			end
+		end,
+	})
+end
+
 -- 打开聊天窗口
 function M.create(config)
 	-- 如果窗口已经存在，则聚焦到输入窗口
@@ -131,6 +146,7 @@ function M.create(config)
 	})
 
 	setup_buffers()
+	setup_autocmd()
 
 	vim.api.nvim_set_current_win(state.input_win)
 	vim.cmd("startinsert!")
