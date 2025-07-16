@@ -55,6 +55,19 @@ function M.setup_commands()
 	vim.keymap.set("n", M.config.keymaps.open_chat, function()
 		M.open_chat_ui()
 	end, { desc = "打开 DeepSeek 聊天窗口" })
+
+	vim.keymap.set(
+		"n",
+		M.config.keymaps.show_history,
+		":DeepSeekShowHistory<CR>",
+		{ desc = "Show DeepSeek Chat History" }
+	)
+	vim.keymap.set(
+		"n",
+		M.config.keymaps.clear_history,
+		":DeepSeekClearHistory<CR>",
+		{ desc = "Clear DeepSeek Chat History" }
+	)
 end
 
 -- 打开聊天窗口

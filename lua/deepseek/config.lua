@@ -10,6 +10,8 @@ M.defaults = {
 	keymaps = {
 		open_chat = "<leader>dc",
 		submit = "<C-Enter>",
+		show_history = "<leader>dhs",
+		lear_history = "<leader>dhc",
 	},
 	apis = {
 		google_gemini = {
