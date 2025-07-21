@@ -34,7 +34,7 @@ function M.setup(opts)
 	M.setup_commands()
 
 	-- 在这里添加你的插件逻辑
-	vim.notify("DeepSeek插件已加载!")
+	vim.notify(model_config.model .. "已加载!")
 end
 
 -- 设置快捷键函数
