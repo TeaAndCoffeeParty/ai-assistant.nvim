@@ -90,49 +90,6 @@ local function setup_buffers()
 		"<CR>",
 		{ noremap = true, silent = true, nowait = true, desc = "插入新行" }
 	)
-	vim.api.nvim_buf_set_keymap(
-		state.input_buf,
-		"n",
-		"<C-w>",
-		"<Nop>",
-		{ noremap = true, silent = true, desc = "禁用窗口操作" }
-	)
-	vim.api.nvim_buf_set_keymap(
-		state.input_buf,
-		"i",
-		"<C-w>",
-		"<Nop>",
-		{ noremap = true, silent = true, desc = "禁用窗口操作" }
-	)
-	vim.api.nvim_buf_set_keymap(
-		state.input_buf,
-		"v",
-		"<C-w>",
-		"<Nop>",
-		{ noremap = true, silent = true, desc = "禁用窗口操作" }
-	)
-
-	vim.api.nvim_buf_set_keymap(
-		state.output_buf,
-		"n",
-		"<C-w>",
-		"<Nop>",
-		{ noremap = true, silent = true, desc = "禁用窗口操作" }
-	)
-	vim.api.nvim_buf_set_keymap(
-		state.output_buf,
-		"i",
-		"<C-w>",
-		"<Nop>",
-		{ noremap = true, silent = true, desc = "禁用窗口操作" }
-	)
-	vim.api.nvim_buf_set_keymap(
-		state.output_buf,
-		"v",
-		"<C-w>",
-		"<Nop>",
-		{ noremap = true, silent = true, desc = "禁用窗口操作" }
-	)
 end
 
 local function setup_autocmd()
