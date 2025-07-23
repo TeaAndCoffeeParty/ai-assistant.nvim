@@ -31,6 +31,10 @@ M.defaults = {
 		},
 	},
 	select_model = "google_gemini",
+	history = {
+		max_save_count = 20,
+		chat_max_count = 10,
+	},
 }
 
 M.config = {}

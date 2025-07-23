@@ -31,6 +31,8 @@ function M.setup(opts)
 	-- 设置快捷键,命令
 	M.setup_commands()
 
+	history.load_history()
+
 	-- 在这里添加你的插件逻辑
 	vim.notify(model_config.model .. "已加载!")
 end
@@ -65,6 +67,18 @@ function M.setup_commands()
 		":DeepSeekClearHistory<CR>",
 		{ desc = "Clear DeepSeek Chat History" }
 	)
+	local ai_chat_augroup = vim.api.nvim_create_augroup("AiChatHistory", { clear = true })
+
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		group = ai_chat_augroup,
+		pattern = "*",
+		callback = function()
+			if history and type(history.save_history) == "function" then
+				history.save_history()
+			end
+		end,
+		desc = "Save AI chat history on Neovim exit",
+	})
 end
 
 -- 打开聊天窗口
