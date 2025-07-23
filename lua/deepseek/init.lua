@@ -1,10 +1,8 @@
-local M = {
-	chat_history = {},
-	current_session_id = nil,
-}
+local M = {}
 
 local window = require("deepseek.window")
 local config = require("deepseek.config")
+local history = require("deepseek.history")
 
 function M.setup(opts)
 	-- 合并默认配置和用户配置
@@ -40,12 +38,11 @@ end
 -- 设置快捷键函数
 function M.setup_commands()
 	vim.api.nvim_create_user_command("DeepSeekClearHistory", function()
-		M.chat_history = {}
-		vim.notify("对话历史已清空")
+		history.clearHistory()
 	end, {})
 
 	vim.api.nvim_create_user_command("DeepSeekShowHistory", function()
-		print(vim.inspect(M.chat_history))
+		history.showHistory()
 	end, {})
 
 	vim.api.nvim_create_user_command("DeepSeek", function()
@@ -86,20 +83,14 @@ function M.submit_input()
 		return
 	end
 
-	table.insert(M.chat_history, {
-		role = "user",
-		content = user_input.prompt,
-		time = os.date("%Y-%m-%d %H:%M:%S"),
-	})
-
 	window.echo_user_input(user_input.raw_input_lines)
 
 	local full_response = ""
 	local messages = {}
-	for i = math.max(1, #M.chat_history - 10), #M.chat_history do
+	for i = math.max(1, #history.chat_history - 10), #history.chat_history do
 		table.insert(messages, {
-			role = M.chat_history[i].role,
-			content = M.chat_history[i].content,
+			role = history.chat_history[i].role,
+			content = history.chat_history[i].content,
 		})
 	end
 
@@ -111,11 +102,8 @@ function M.submit_input()
 			end
 		end,
 		on_finish = function()
-			table.insert(M.chat_history, {
-				role = "assistant",
-				content = full_response,
-				time = os.date("%Y-%m-%d %H:%M:%S"),
-			})
+			history.insertHistory("user", user_input.prompt)
+			history.insertHistory("assistant", full_response)
 
 			window.safe_buf_update("\n\n当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))
 			window.safe_buf_update("\n\n-------------------\n")
@@ -133,26 +121,6 @@ function M.submit_input()
 			vim.bo[state.output_buf].filetype = "markdown"
 		end,
 	})
-end
-
-function M.save_history()
-	local history_path = vim.fn.stdpath("data") .. "/deepseek_history.json"
-	local data = {
-		sessions = {
-			[M.current_session_id or "default"] = M.chat_history,
-		},
-	}
-	vim.fn.writefile({ vim.fn.json_encode(data) }, history_path)
-end
-
-function M.load_history()
-	local history_path = vim.fn.stdpath("data") .. "/deepseek_history.json"
-	if vim.fn.filereadable(history_path) == 1 then
-		local data = vim.fn.json_decode(vim.fn.readfile(history_path))
-		if data.sessions and data.sessions[M.current_session_id or "default"] then
-			M.chat_history = data.sessions[M.current_session_id or "default"]
-		end
-	end
 end
 
 return M
