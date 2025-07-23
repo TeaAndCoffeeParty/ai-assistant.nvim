@@ -205,23 +205,22 @@ function M.get_input()
 
 	local prompt = table.concat(input_lines, "\n")
 
-	local display_lines = {}
-	for _, line in ipairs(input_lines) do
-		if line ~= "" then
-			table.insert(display_lines, "> " .. line)
-		end
-	end
-
 	return {
 		prompt = prompt,
-		display_lines = display_lines,
+		raw_input_lines = input_lines,
 	}
 end
 
 function M.echo_user_input(input)
 	vim.bo[state.output_buf].filetype = "text"
+	local display_lines = {}
+	for _, line in ipairs(input) do
+		if line ~= "" then
+			table.insert(display_lines, "> " .. line)
+		end
+	end
 
-	M.safe_buf_update(table.concat(input, "\n\n"))
+	M.safe_buf_update(table.concat(display_lines, "\n\n"))
 	M.safe_buf_update("\n-------------------\n")
 end
 

@@ -86,14 +86,13 @@ function M.submit_input()
 		return
 	end
 
-	--	local user_content = table.concat(user_input.display_lines, "\n")
 	table.insert(M.chat_history, {
 		role = "user",
 		content = user_input.prompt,
 		time = os.date("%Y-%m-%d %H:%M:%S"),
 	})
 
-	window.echo_user_input(user_input.display_lines)
+	window.echo_user_input(user_input.raw_input_lines)
 
 	local full_response = ""
 	local messages = {}
