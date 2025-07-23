@@ -86,13 +86,7 @@ function M.submit_input()
 	window.echo_user_input(user_input.raw_input_lines)
 
 	local full_response = ""
-	local messages = {}
-	for i = math.max(1, #history.chat_history - 10), #history.chat_history do
-		table.insert(messages, {
-			role = history.chat_history[i].role,
-			content = history.chat_history[i].content,
-		})
-	end
+	local messages = history.insertHistory("user", user_input.prompt)
 
 	require("deepseek.api").query_stream(messages, {
 		on_data = function(content)
@@ -102,7 +96,6 @@ function M.submit_input()
 			end
 		end,
 		on_finish = function()
-			history.insertHistory("user", user_input.prompt)
 			history.insertHistory("assistant", full_response)
 
 			window.safe_buf_update("\n\n当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))

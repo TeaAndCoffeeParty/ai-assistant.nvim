@@ -13,6 +13,7 @@ function M.insertHistory(role, content)
 			content = M.chat_history[i].content,
 		})
 	end
+	return messages
 end
 
 function M.clearHistory()
