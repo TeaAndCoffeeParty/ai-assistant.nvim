@@ -10,38 +10,38 @@ local state = {
 }
 
 local function setup_buffers()
-	local input_buf = vim.bo[state.input_buf]
-	local output_buf = vim.bo[state.output_buf]
+	local input_buf_obj = vim.bo[state.input_buf]
+	local output_buf_obj = vim.bo[state.output_buf]
 
-	local input_win = vim.wo[state.input_win]
-	local output_win = vim.wo[state.output_win]
+	local input_win_obj = vim.wo[state.input_win]
+	local output_win_obj = vim.wo[state.output_win]
 
 	-- 输入缓冲区设置
-	input_buf.buftype = "nofile"
-	input_buf.filetype = "text"
-	input_buf.modifiable = true
-	input_buf.bufhidden = "wipe"
+	input_buf_obj.buftype = "nofile"
+	input_buf_obj.filetype = "text"
+	input_buf_obj.modifiable = true
+	input_buf_obj.bufhidden = "wipe"
 	vim.opt_local.spell = false
 
 	-- 输入窗口设置
-	input_win.number = false
-	input_win.relativenumber = false
-	input_win.wrap = true
-	input_win.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
+	input_win_obj.number = false
+	input_win_obj.relativenumber = false
+	input_win_obj.wrap = true
+	input_win_obj.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
 
 	-- 输出缓冲区设置
-	output_buf.buftype = "nofile"
-	output_buf.filetype = "markdown"
-	output_buf.modifiable = true
-	output_buf.bufhidden = "wipe"
-	output_buf.syntax = "off"
+	output_buf_obj.buftype = "nofile"
+	output_buf_obj.filetype = "markdown"
+	output_buf_obj.modifiable = true
+	output_buf_obj.bufhidden = "wipe"
+	output_buf_obj.syntax = "off"
 	vim.api.nvim_buf_set_option(state.input_buf, "spell", false)
 
 	-- 输出窗口设置
-	output_win.number = false
-	output_win.relativenumber = false
-	output_win.wrap = true
-	output_win.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
+	output_win_obj.number = false
+	output_win_obj.relativenumber = false
+	output_win_obj.wrap = true
+	output_win_obj.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
 
 	-- 设置初始内容
 	if state.cached_content then
@@ -51,8 +51,8 @@ local function setup_buffers()
 		vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
 		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "等待您的问题...", "" })
 	end
-	output_buf.modifiable = false
-	output_buf.readonly = true
+	output_buf_obj.modifiable = false
+	output_buf_obj.readonly = true
 
 	-- 输入窗口映射
 	vim.api.nvim_buf_set_keymap(
@@ -89,6 +89,49 @@ local function setup_buffers()
 		"<S-CR>",
 		"<CR>",
 		{ noremap = true, silent = true, nowait = true, desc = "插入新行" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.input_buf,
+		"n",
+		"<C-w>",
+		"<Nop>",
+		{ noremap = true, silent = true, desc = "禁用窗口操作" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.input_buf,
+		"i",
+		"<C-w>",
+		"<Nop>",
+		{ noremap = true, silent = true, desc = "禁用窗口操作" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.input_buf,
+		"v",
+		"<C-w>",
+		"<Nop>",
+		{ noremap = true, silent = true, desc = "禁用窗口操作" }
+	)
+
+	vim.api.nvim_buf_set_keymap(
+		state.output_buf,
+		"n",
+		"<C-w>",
+		"<Nop>",
+		{ noremap = true, silent = true, desc = "禁用窗口操作" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.output_buf,
+		"i",
+		"<C-w>",
+		"<Nop>",
+		{ noremap = true, silent = true, desc = "禁用窗口操作" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.output_buf,
+		"v",
+		"<C-w>",
+		"<Nop>",
+		{ noremap = true, silent = true, desc = "禁用窗口操作" }
 	)
 end
 
