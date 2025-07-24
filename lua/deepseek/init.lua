@@ -51,10 +51,20 @@ function M.setup_commands()
 		M.open_chat_ui()
 	end, {})
 
+	vim.api.nvim_create_user_command("DeepSeekVisual", function()
+		M.send_visual_selection()
+	end, { range = true })
+
 	vim.keymap.set("n", M.config.keymaps.open_chat, function()
 		M.open_chat_ui()
 	end, { desc = "打开 DeepSeek 聊天窗口" })
 
+	vim.keymap.set(
+		"v",
+		M.config.keymaps.open_chat,
+		":DeepSeekVisual<CR>",
+		{ desc = "将选中内容发送给 DeepSeek" }
+	)
 	vim.keymap.set(
 		"n",
 		M.config.keymaps.show_history,
@@ -84,6 +94,32 @@ end
 -- 打开聊天窗口
 function M.open_chat_ui()
 	local win_state = window.create(M.config.window)
+end
+
+-- 处理Visual模式选择的内容
+function M.send_visual_selection()
+	-- 获取选择的文本
+	local visual_selection = vim.fn.getline("'<", "'>")
+	if not visual_selection or #visual_selection == 0 then
+		vim.notify("没有选中任何内容", vim.log.levels.WARN)
+		return
+	end
+
+	-- 打开聊天窗口
+	M.open_chat_ui()
+
+	-- 等待窗口创建完成
+	vim.defer_fn(function()
+		local state = window.get_state()
+		if state and state.input_buf then
+			-- 将选中的内容填入输入区
+			vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, visual_selection)
+
+			-- 将光标移到输入区末尾，允许用户继续编辑
+			local line_count = #visual_selection
+			vim.api.nvim_win_set_cursor(state.input_win, { line_count, #visual_selection[line_count] })
+		end
+	end, 100)
 end
 
 function M.close_windows()
@@ -131,3 +167,4 @@ function M.submit_input()
 end
 
 return M
+
