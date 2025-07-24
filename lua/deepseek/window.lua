@@ -148,6 +148,10 @@ function M.create(config)
 	setup_buffers()
 	setup_autocmd()
 
+	-- 滚动到最底部
+	local line_count = vim.api.nvim_buf_line_count(state.output_buf)
+	vim.api.nvim_win_set_cursor(state.output_win, { line_count, 0 })
+
 	vim.api.nvim_set_current_win(state.input_win)
 	vim.cmd("startinsert!")
 
