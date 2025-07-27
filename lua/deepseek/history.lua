@@ -92,6 +92,11 @@ local function create_history_window(lines)
 		style = "minimal",
 	}
 	local win_id = vim.api.nvim_open_win(buf, true, opts)
+
+	-- 设置光标到底部，实现自动滚动到底部
+	local line_count = vim.api.nvim_buf_line_count(buf)
+	vim.api.nvim_win_set_cursor(win_id, { line_count, 0 })
+
 	vim.keymap.set("n", "q", "<cmd>close<CR>", {
 		buffer = buf,
 		nowait = true,
