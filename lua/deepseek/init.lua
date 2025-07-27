@@ -10,23 +10,23 @@ function M.setup(opts)
 
 	-- 如果插件被禁用则返回
 	if not M.config.enabled then
-		vim.notify("DeepSeek插件已禁用")
+		vim.notify("AI Chat Plugin Disabled")
 		return
 	end
 
 	local model_config, err = config.get_model()
 
 	if err or not model_config then
-		error("获取模型配置失败: " .. (err or "未知错误"))
+		error("Get Model Config Failed: " .. (err or "Unkown Error"))
 	end
 
 	-- 关键配置验证
 	assert(
 		type(model_config.api_key) == "string" and #model_config.api_key > 0,
-		"必须配置 DeepSeek API Key (通过 setup() 或环境变量 DEEPSEEK_API_KEY)"
+		"Pleae Config AI Chat API Key(setup() or get environment API KEY)"
 	)
-	assert(model_config.api_url, "必须配置 api_url")
-	assert(model_config.model, "必须配置 model")
+	assert(model_config.api_url, "Please Config api_url")
+	assert(model_config.model, "Please Config model")
 
 	-- 设置快捷键,命令
 	M.setup_commands()
@@ -34,49 +34,34 @@ function M.setup(opts)
 	history.load_history()
 
 	-- 在这里添加你的插件逻辑
-	vim.notify(model_config.model .. "已加载!")
+	vim.notify(model_config.model .. "has benn loaded!")
 end
 
 -- 设置快捷键函数
 function M.setup_commands()
-	vim.api.nvim_create_user_command("DeepSeekClearHistory", function()
+	vim.api.nvim_create_user_command("ChatClearHistory", function()
 		history.clearHistory()
 	end, {})
 
-	vim.api.nvim_create_user_command("DeepSeekShowHistory", function()
+	vim.api.nvim_create_user_command("ChatShowHistory", function()
 		history.showHistory()
 	end, {})
 
-	vim.api.nvim_create_user_command("DeepSeek", function()
+	vim.api.nvim_create_user_command("Chat", function()
 		M.open_chat_ui()
 	end, {})
 
-	vim.api.nvim_create_user_command("DeepSeekVisual", function()
+	vim.api.nvim_create_user_command("ChatVisual", function()
 		M.send_visual_selection()
 	end, { range = true })
 
 	vim.keymap.set("n", M.config.keymaps.open_chat, function()
 		M.open_chat_ui()
-	end, { desc = "打开 DeepSeek 聊天窗口" })
+	end, { desc = "Open AI Chat Window" })
 
-	vim.keymap.set(
-		"v",
-		M.config.keymaps.open_chat,
-		":DeepSeekVisual<CR>",
-		{ desc = "将选中内容发送给 DeepSeek" }
-	)
-	vim.keymap.set(
-		"n",
-		M.config.keymaps.show_history,
-		":DeepSeekShowHistory<CR>",
-		{ desc = "Show DeepSeek Chat History" }
-	)
-	vim.keymap.set(
-		"n",
-		M.config.keymaps.clear_history,
-		":DeepSeekClearHistory<CR>",
-		{ desc = "Clear DeepSeek Chat History" }
-	)
+	vim.keymap.set("v", M.config.keymaps.open_chat, ":ChatVisual<CR>", { desc = "Send Selected Content to Chat" })
+	vim.keymap.set("n", M.config.keymaps.show_history, ":ChatShowHistory<CR>", { desc = "Show Chat Chat History" })
+	vim.keymap.set("n", M.config.keymaps.clear_history, ":ChatClearHistory<CR>", { desc = "Clear Chat Chat History" })
 	local ai_chat_augroup = vim.api.nvim_create_augroup("AiChatHistory", { clear = true })
 
 	vim.api.nvim_create_autocmd("VimLeavePre", {
@@ -101,7 +86,7 @@ function M.send_visual_selection()
 	-- 获取选择的文本
 	local visual_selection = vim.fn.getline("'<", "'>")
 	if not visual_selection or #visual_selection == 0 then
-		vim.notify("没有选中任何内容", vim.log.levels.WARN)
+		vim.notify("Nothing has been selected", vim.log.levels.WARN)
 		return
 	end
 
@@ -148,7 +133,7 @@ function M.submit_input()
 		on_finish = function()
 			history.insertHistory("assistant", full_response)
 
-			window.safe_buf_update("\n\n当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))
+			window.safe_buf_update("\n\nTimestamp:" .. os.date("%Y-%m-%d %H:%M:%S"))
 			window.safe_buf_update("\n\n-------------------\n")
 			--清空输入区
 			vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
@@ -158,7 +143,7 @@ function M.submit_input()
 		end,
 		on_error = function(err)
 			window.safe_buf_update("\n\n[ERROR] " .. tostring(err))
-			window.safe_buf_update("\n当前时间：" .. os.date("%Y-%m-%d %H:%M:%S"))
+			window.safe_buf_update("\nTimestamp:" .. os.date("%Y-%m-%d %H:%M:%S"))
 			window.safe_buf_update("\n\n-------------------\n")
 			vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
 			vim.bo[state.output_buf].filetype = "markdown"
@@ -167,4 +152,3 @@ function M.submit_input()
 end
 
 return M
-

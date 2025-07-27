@@ -34,7 +34,7 @@ function M.clearHistory()
 		M.history_win_id = nil
 		M.history_buf_id = nil
 	end
-	vim.notify("对话历史已清空")
+	vim.notify("History is clear")
 end
 
 -- 格式化历史记录为 markdown 行
@@ -53,7 +53,7 @@ local function format_history_lines(chat_history)
 		table.insert(lines, string.rep("-", 40))
 	end
 	if #lines == 0 then
-		table.insert(lines, "暂无历史记录")
+		table.insert(lines, "No History")
 	end
 	return lines
 end
@@ -126,9 +126,9 @@ function M.save_history()
 		vim.fn.writefile({ vim.fn.json_encode(M.chat_history) }, history_path)
 	end)
 	if not ok then
-		vim.notify("保存历史记录失败: " .. err, vim.log.levels.ERROR)
+		vim.notify("Save History to: " .. err, vim.log.levels.ERROR)
 	else
-		vim.notify("历史记录已保存到: " .. history_path, vim.log.levels.INFO)
+		vim.notify("History saved to : " .. history_path, vim.log.levels.INFO)
 	end
 end
 
@@ -140,13 +140,13 @@ function M.load_history()
 		end)
 		if ok and type(data) == "table" then
 			M.chat_history = data
-			vim.notify("历史记录已从 " .. history_path .. " 加载", vim.log.levels.INFO)
+			vim.notify("History has been loaded", vim.log.levels.INFO)
 		else
-			vim.notify("加载历史记录失败或文件内容无效。", vim.log.levels.WARN)
+			vim.notify("Load History failed ro invalid content.", vim.log.levels.WARN)
 			M.chat_history = {} -- 防止加载失败导致 chat_history 为 nil 或错误类型
 		end
 	else
-		vim.notify("历史记录文件不存在，将创建新的历史记录。", vim.log.levels.INFO)
+		vim.notify("No History file and new one created.", vim.log.levels.INFO)
 		M.chat_history = {}
 	end
 end

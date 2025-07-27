@@ -8,7 +8,7 @@ function api.query(prompt, callback)
 	local model = require("deepseek").config.get_model
 
 	if not model.api_key then
-		vim.notify("DeepSeek API key 未配置", vim.log.levels.ERROR)
+		vim.notify("Chat API Key Not Found", vim.log.levels.ERROR)
 		return
 	end
 
@@ -37,18 +37,18 @@ function api.query(prompt, callback)
 
 	-- 错误处理
 	if not ok then
-		vim.notify("API 请求失败" .. tostring(response), vim.log.levels.ERROR)
+		vim.notify("API Request Failed:" .. tostring(response), vim.log.levels.ERROR)
 	end
 
 	-- 检查HTTP状态
 	if response.status ~= 200 then
-		local err_msg = "API 错误：HTTP " .. tostring(response.status)
+		local err_msg = "API Error: HTTP " .. tostring(response.status)
 		if response.body then
 			local parse_ok, err_data = pcall(json.decode, response.body)
 			if parse_ok and err_data and err_data.error then
 				err_msg = err_msg .. " - " .. tostring(err_data.error.message)
 			else
-				err_msg = err_msg .. "\n响应体：" .. tostring(response.body)
+				err_msg = err_msg .. "\nResponse：" .. tostring(response.body)
 			end
 		end
 		vim.notify(err_msg, vim.log.levels.ERROR)
@@ -58,7 +58,7 @@ function api.query(prompt, callback)
 	-- 解析响应
 	local decode_ok, result = pcall(json.decode, response.body)
 	if not decode_ok or not result.choices then
-		vim.notify("无效的 API 响应格式：\n" .. tostring(response.body), vim.log.levels.ERROR)
+		vim.notify("Invalid API Response：\n" .. tostring(response.body), vim.log.levels.ERROR)
 		return
 	end
 
@@ -69,12 +69,12 @@ function api.query_stream(messages, callbacks)
 	local model = require("deepseek.config").get_model()
 
 	if not model or not model.api_key then
-		vim.notify("DeepSeek API key 未配置", vim.log.levels.ERROR)
+		vim.notify("Chat API Key Not Found", vim.log.levels.ERROR)
 		return
 	end
 
 	-- 调试信息
-	print("Starting stream request to:", model.api_url)
+	-- print("Starting stream request to:", model.api_url)
 
 	local cmd = {
 		"curl",
@@ -139,7 +139,7 @@ function api.query_stream(messages, callbacks)
 		if vim.fn.jobwait({ job_id }, 0)[1] == -1 then
 			print("Force stopping job due to timeout")
 			vim.fn.jobstop(job_id)
-			callbacks.on_error("REquest timeout")
+			callbacks.on_error("Reqest timeout")
 		end
 	end, model.timeout or default_timeout)
 end

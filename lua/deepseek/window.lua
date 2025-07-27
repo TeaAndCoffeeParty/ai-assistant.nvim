@@ -49,7 +49,7 @@ local function setup_buffers()
 		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, state.cached_content.output_buf)
 	else
 		vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
-		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "等待您的问题...", "" })
+		vim.api.nvim_buf_set_lines(state.output_buf, 0, -1, false, { "Waiting for your question ...", "" })
 	end
 	output_buf_obj.modifiable = false
 	output_buf_obj.readonly = true
@@ -60,28 +60,28 @@ local function setup_buffers()
 		"n",
 		"<Esc>",
 		"<cmd>lua require('deepseek').close_windows()<CR>",
-		{ noremap = true, silent = true, nowait = true, desc = "关闭聊天窗口" }
+		{ noremap = true, silent = true, nowait = true, desc = "Close Chat Window" }
 	)
 	vim.api.nvim_buf_set_keymap(
 		state.input_buf,
 		"n",
 		"q",
 		"<cmd>lua require('deepseek').close_windows()<CR>",
-		{ noremap = true, silent = true, nowait = true, desc = "关闭聊天窗口" }
+		{ noremap = true, silent = true, nowait = true, desc = "Close Chat Window" }
 	)
 	vim.api.nvim_buf_set_keymap(
 		state.input_buf,
 		"n",
 		"<leader>ds",
 		"<cmd>lua require('deepseek').submit_input()<CR>",
-		{ noremap = true, silent = true, nowait = true, desc = "提交输入" }
+		{ noremap = true, silent = true, nowait = true, desc = "Submit Input" }
 	)
 	vim.api.nvim_buf_set_keymap(
 		state.input_buf,
 		"i",
 		"<CR>",
 		"<cmd>lua require('deepseek').submit_input()<CR>",
-		{ noremap = true, silent = true, nowait = true, desc = "提交输入" }
+		{ noremap = true, silent = true, nowait = true, desc = "Submit Input" }
 	)
 	vim.api.nvim_buf_set_keymap(
 		state.input_buf,
@@ -141,7 +141,7 @@ function M.create(config)
 		col = (vim.o.columns - config.width),
 		row = (vim.o.lines - total_height) / 2 + output_height + 2,
 		border = "single",
-		title = "输入区（按ESC关闭, Enter 提交,Ctrl+J换行）",
+		title = "Input Window（ESC to close, Enter to Submit, Ctrl+J to New Line）",
 		title_pos = "center",
 	})
 
@@ -159,7 +159,7 @@ function M.create(config)
 end
 
 function M.close()
-	vim.notify("正在关闭DeepSeek窗口...", vim.log.levels.INFO)
+	vim.notify("Closing Chat Window ...", vim.log.levels.INFO)
 	local current_win = vim.api.nvim_get_current_win()
 	if current_win == state.input_win or current_win == state.output_win then
 		vim.cmd("wincmd p")
@@ -185,7 +185,7 @@ function M.close()
 	state.input_win = nil
 	state.output_win = nil
 
-	vim.notify("DeepSeek窗口已关闭", vim.log.levels.INFO)
+	vim.notify("Chat Window closed", vim.log.levels.INFO)
 end
 
 function M.get_state()
@@ -203,7 +203,7 @@ function M.get_input()
 	end
 
 	if not has_content then
-		vim.notify("请输入有效内容", vim.log.levels.WARN)
+		vim.notify("Please input valid content", vim.log.levels.WARN)
 		return nil
 	end
 
