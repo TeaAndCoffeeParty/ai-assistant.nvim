@@ -130,7 +130,7 @@ function M.create(config)
 		col = (vim.o.columns - config.width),
 		row = (vim.o.lines - total_height) / 2,
 		border = "single",
-		title = "输出区",
+		title = "Output Window",
 		title_pos = "center",
 	})
 
