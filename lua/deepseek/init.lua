@@ -34,7 +34,7 @@ function M.setup(opts)
 	history.load_history()
 
 	-- 在这里添加你的插件逻辑
-	vim.notify(model_config.model .. "has benn loaded!")
+	vim.notify(model_config.model .. " has benn loaded!")
 end
 
 -- 设置快捷键函数
