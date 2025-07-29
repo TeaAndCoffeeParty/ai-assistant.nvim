@@ -11,7 +11,8 @@ M.defaults = {
 		open_chat = "<leader>dc",
 		submit = "<C-Enter>",
 		show_history = "<leader>dh",
-		clear_history = "<leader>dd",
+		clear_history = "<leader>ddh",
+		clear_prompt = "<leader>ddp",
 	},
 	apis = {
 		google_gemini = {

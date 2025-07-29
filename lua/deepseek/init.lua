@@ -43,6 +43,9 @@ function M.setup_commands()
 		history.clearHistory()
 	end, {})
 
+	vim.api.nvim_create_user_command("ChatClearPrompt", function()
+		history.resetPromptContext()
+	end, {})
 	vim.api.nvim_create_user_command("ChatShowHistory", function()
 		history.showHistory()
 	end, {})
@@ -60,8 +63,9 @@ function M.setup_commands()
 	end, { desc = "Open AI Chat Window" })
 
 	vim.keymap.set("v", M.config.keymaps.open_chat, ":ChatVisual<CR>", { desc = "Send Selected Content to Chat" })
-	vim.keymap.set("n", M.config.keymaps.show_history, ":ChatShowHistory<CR>", { desc = "Show Chat Chat History" })
-	vim.keymap.set("n", M.config.keymaps.clear_history, ":ChatClearHistory<CR>", { desc = "Clear Chat Chat History" })
+	vim.keymap.set("n", M.config.keymaps.show_history, ":ChatShowHistory<CR>", { desc = "Show Chat History" })
+	vim.keymap.set("n", M.config.keymaps.clear_history, ":ChatClearHistory<CR>", { desc = "Clear Chat History" })
+	vim.keymap.set("n", M.config.keymaps.clear_prompt, ":ChatClearPrompt<CR>", { desc = "Clear Chat Prompt History" })
 	local ai_chat_augroup = vim.api.nvim_create_augroup("AiChatHistory", { clear = true })
 
 	vim.api.nvim_create_autocmd("VimLeavePre", {
