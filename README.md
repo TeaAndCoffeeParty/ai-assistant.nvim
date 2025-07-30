@@ -1,6 +1,6 @@
-# 🚀 Deepseek.nvim - 智能 AI 聊天与代码助手
+# 🚀 AI-assistant.nvim - 智能 AI 聊天与代码助手
 
-`Deepseek.nvim` 是一个功能丰富的 Neovim 插件，它集成了强大的 AI 聊天功能，并允许你将代码内容作为上下文发送给 AI，从而获得更精准、更实用的编程协助。
+`ai-assistant.nvim` 是一个功能丰富的 Neovim 插件，它集成了强大的 AI 聊天功能，并允许你将代码内容作为上下文发送给 AI，从而获得更精准、更实用的编程协助。
 
 ## ✨ 功能特性
 
@@ -24,10 +24,10 @@
 **使用 `lazy.nvim` (推荐):**
 
 ```lua
--- init.lua 或 plugins/deepseek.lua
+-- init.lua 或 plugins/ai-assistant.lua
 
 return {
-  "TeaAndCoffeeParty/deepseek.nvim",
+  "TeaAndCoffeeParty/ai-assistant.nvim",
   opts = {
     enabled = true,
     window = { width = 0.6, height = 0.8, split_ratio = 0.2 },
@@ -39,7 +39,7 @@ return {
     "nvim-lua/plenary.nvim",
   },
   config = function(_, opts)
-    require("deepseek").setup(opts)
+    require("ai-assistant").setup(opts)
   end,
 }
 ```
@@ -49,12 +49,12 @@ return {
 ```lua
 -- plugins.lua
 use {
-  "TeaAndCoffeeParty/deepseek.nvim",
+  "TeaAndCoffeeParty/ai-assistant.nvim",
   requires = {
     'nvim-lua/plenary.nvim',
   },
   config = function()
-    require('deepseek').setup({
+    require('ai-assistant').setup({
       -- 你的配置选项
     })
   end,
@@ -66,7 +66,7 @@ use {
 插件提供了丰富的配置选项，你可以根据自己的需求在 `setup()` 函数中进行配置。
 
 ```lua
-require('deepseek').setup({
+require('ai-assistant').setup({
   enabled = true, -- 是否启用插件，默认为 true
 
   -- 窗口布局配置
