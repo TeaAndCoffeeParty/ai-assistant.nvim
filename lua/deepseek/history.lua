@@ -149,7 +149,7 @@ local function create_history_window(lines)
 	local win_height = math.min(#lines + 2, math.floor(screen_height * 0.9))
 	local win_width = math.min(max_width + 4, math.floor(screen_width * 0.7)) -- 调整宽度使其更可见
 	local row = math.floor((screen_height - win_height) / 2)
-	local col = math.floor((screen_width - win_width) / 2) -- 居中显示
+	local col = math.floor((screen_width - win_width))
 
 	local buf = vim.api.nvim_create_buf(false, true)
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
