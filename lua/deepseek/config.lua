@@ -13,6 +13,8 @@ M.defaults = {
 		show_history = "<leader>dh",
 		clear_history = "<leader>ddh",
 		clear_prompt = "<leader>ddp",
+		chat_current_line = "<leader>drl",
+		chat_file = "<leader>drf",
 	},
 	apis = {
 		google_gemini = {
@@ -36,6 +38,7 @@ M.defaults = {
 		max_save_count = 20,
 		chat_max_count = 10,
 	},
+	max_context_lines = 1000,
 }
 
 M.config = {}

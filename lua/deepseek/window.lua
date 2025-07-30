@@ -192,26 +192,81 @@ function M.get_state()
 	return state
 end
 
+--- 获取用户输入，并尝试解析代码上下文
+--- @return table|nil {raw_input_lines: table, full_prompt: string, code_context: string, user_question: string}
 function M.get_input()
-	local input_lines = vim.api.nvim_buf_get_lines(state.input_buf, 0, -1, false)
-	local has_content = false
-	for _, line in ipairs(input_lines) do
-		if line:match("%S") then
-			has_content = true
-			break
-		end
-	end
-
-	if not has_content then
-		vim.notify("Please input valid content", vim.log.levels.WARN)
+	local current_state = M.get_state()
+	if not current_state or not current_state.input_buf then
 		return nil
 	end
 
-	local prompt = table.concat(input_lines, "\n")
+	local raw_input_lines = vim.api.nvim_buf_get_lines(current_state.input_buf, 0, -1, false)
+	local code_context_lines = {}
+	local user_question_lines = {}
+	local in_code_block = false
+	local has_code_block_marker = false
+	local has_question_marker = false
+	local code_block_filetype = "plaintext" -- Default if not specified
+
+	-- Try to parse the input buffer
+	for i, line in ipairs(raw_input_lines) do
+		if line:match("^```(%S*)$") then -- Matches ``` followed by optional filetype
+			in_code_block = not in_code_block
+			has_code_block_marker = true
+			if in_code_block then -- Entering a code block
+				local ft = line:match("^```(%S*)$")
+				if ft and #ft > 0 then
+					code_block_filetype = ft
+				end
+			end
+		elseif not in_code_block and line:match("^My question is:$") then
+			has_question_marker = true
+			-- The actual user question starts from the next line
+		elseif in_code_block then
+			table.insert(code_context_lines, line)
+		elseif has_question_marker then
+			table.insert(user_question_lines, line)
+		else
+			-- If no code block or question marker, assume it's all user question
+			-- This branch only hit if no special markers are found at all
+			if not has_code_block_marker and not has_question_marker then
+				table.insert(user_question_lines, line)
+			end
+		end
+	end
+
+	local code_context_str = ""
+	if #code_context_lines > 0 then
+		-- Reconstruct the code block exactly as it was provided for the AI
+		code_context_str =
+			string.format("```%s\n%s\n```\n", code_block_filetype, table.concat(code_context_lines, "\n"))
+	end
+
+	local user_question_str = table.concat(user_question_lines, "\n")
+
+	-- If no specific question marker was found, treat the whole input as the question
+	if not has_question_marker and not has_code_block_marker then
+		user_question_str = table.concat(raw_input_lines, "\n")
+		code_context_str = "" -- No distinct code context
+	end
+
+	-- Construct the full prompt that will be sent to the AI
+	local full_prompt = ""
+	if code_context_str ~= "" then
+		full_prompt = full_prompt .. "Here is some code context:\n" .. code_context_str .. "\n"
+	end
+	full_prompt = full_prompt .. "My question is: " .. user_question_str
+
+	if #vim.trim(user_question_str) == 0 and #vim.trim(code_context_str) == 0 then
+		vim.notify("Empty input.", vim.log.levels.WARN)
+		return nil
+	end
 
 	return {
-		prompt = prompt,
-		raw_input_lines = input_lines,
+		raw_input_lines = raw_input_lines, -- 用户在输入缓冲区中输入的原始行
+		full_prompt = full_prompt, -- 发送给 AI 的最终提示
+		code_context = code_context_str, -- 解析出的代码部分
+		user_question = user_question_str, -- 解析出的用户纯文本问题
 	}
 end
 
