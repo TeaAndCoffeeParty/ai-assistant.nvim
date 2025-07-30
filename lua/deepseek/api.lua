@@ -81,7 +81,6 @@ function api.query_stream(messages, callbacks)
 		model = model_config.model,
 		messages = messages,
 		temperature = 0.7,
-		max_tokens = 1000, -- 限制 AI 回复的长度
 		stream = true, -- 开启流式传输
 	})
 
