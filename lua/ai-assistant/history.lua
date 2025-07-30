@@ -1,6 +1,6 @@
 local M = { chat_history = {} }
 
-local config = require("deepseek.config")
+local config = require("ai-assistant.config")
 
 M.history_win_id = nil
 M.history_buf_id = nil

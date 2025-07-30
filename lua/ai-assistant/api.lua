@@ -5,7 +5,7 @@ local api = {}
 local default_timeout = 60000
 
 function api.query(prompt, callback)
-	local model = require("deepseek").config.get_model
+	local model = require("ai-assistant").config.get_model
 
 	if not model.api_key then
 		vim.notify("Chat API Key Not Found", vim.log.levels.ERROR)
@@ -66,7 +66,7 @@ function api.query(prompt, callback)
 end
 
 function api.query_stream(messages, callbacks)
-	local model_config, err = require("deepseek.config").get_model()
+	local model_config, err = require("ai-assistant.config").get_model()
 
 	if err or not model_config then
 		callbacks.on_error("Failed to get model config: " .. (err or "Unknown error"))

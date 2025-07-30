@@ -59,28 +59,28 @@ local function setup_buffers()
 		state.input_buf,
 		"n",
 		"<Esc>",
-		"<cmd>lua require('deepseek').close_windows()<CR>",
+		"<cmd>lua require('ai-assistant').close_windows()<CR>",
 		{ noremap = true, silent = true, nowait = true, desc = "Close Chat Window" }
 	)
 	vim.api.nvim_buf_set_keymap(
 		state.input_buf,
 		"n",
 		"q",
-		"<cmd>lua require('deepseek').close_windows()<CR>",
+		"<cmd>lua require('ai-assistant').close_windows()<CR>",
 		{ noremap = true, silent = true, nowait = true, desc = "Close Chat Window" }
 	)
 	vim.api.nvim_buf_set_keymap(
 		state.input_buf,
 		"n",
 		"<leader>ds",
-		"<cmd>lua require('deepseek').submit_input()<CR>",
+		"<cmd>lua require('ai-assistant').submit_input()<CR>",
 		{ noremap = true, silent = true, nowait = true, desc = "Submit Input" }
 	)
 	vim.api.nvim_buf_set_keymap(
 		state.input_buf,
 		"i",
 		"<CR>",
-		"<cmd>lua require('deepseek').submit_input()<CR>",
+		"<cmd>lua require('ai-assistant').submit_input()<CR>",
 		{ noremap = true, silent = true, nowait = true, desc = "Submit Input" }
 	)
 	vim.api.nvim_buf_set_keymap(

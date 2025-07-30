@@ -1,9 +1,9 @@
 local M = {}
 
-local window = require("deepseek.window")
-local config = require("deepseek.config")
-local history = require("deepseek.history")
-local request_api = require("deepseek.api")
+local window = require("ai-assistant.window")
+local config = require("ai-assistant.config")
+local history = require("ai-assistant.history")
+local request_api = require("ai-assistant.api")
 
 function M.setup(opts)
 	-- 合并默认配置和用户配置
