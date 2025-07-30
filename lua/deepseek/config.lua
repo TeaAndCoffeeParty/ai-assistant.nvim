@@ -15,6 +15,7 @@ M.defaults = {
 		clear_prompt = "<leader>ddp",
 		chat_current_line = "<leader>drl",
 		chat_file = "<leader>drf",
+		select_model = "<leader>dsm",
 	},
 	apis = {
 		google_gemini = {

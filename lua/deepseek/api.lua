@@ -66,12 +66,24 @@ function api.query(prompt, callback)
 end
 
 function api.query_stream(messages, callbacks)
-	local model = require("deepseek.config").get_model()
+	local model_config, err = require("deepseek.config").get_model()
 
-	if not model or not model.api_key then
-		vim.notify("Chat API Key Not Found", vim.log.levels.ERROR)
+	if err or not model_config then
+		callbacks.on_error("Failed to get model config: " .. (err or "Unknown error"))
 		return
 	end
+	if not model_config or not model_config.api_key then
+		callbacks.on_error("API Key not set for model: " .. model_config.model)
+		return
+	end
+
+	local payload = vim.json.encode({
+		model = model_config.model,
+		messages = messages,
+		temperature = 0.7,
+		max_tokens = 1000, -- 限制 AI 回复的长度
+		stream = true, -- 开启流式传输
+	})
 
 	-- 调试信息
 	-- print("Starting stream request to:", model.api_url)
@@ -85,7 +97,7 @@ function api.query_stream(messages, callbacks)
 		"-H",
 		"Content-Type: application/json",
 		"-H",
-		"Authorization: Bearer " .. model.api_key,
+		"Authorization: Bearer " .. model_config.api_key,
 		"-H",
 		"Accept: text/event-stream",
 		"-H",
@@ -93,12 +105,8 @@ function api.query_stream(messages, callbacks)
 		"--write-out",
 		"HTTP_STATUS:%{http_code}",
 		"--data",
-		json.encode({
-			model = model.model,
-			messages = messages,
-			stream = true,
-		}),
-		model.api_url,
+		payload,
+		model_config.api_url,
 	}
 
 	local full_response = ""
@@ -141,7 +149,7 @@ function api.query_stream(messages, callbacks)
 			vim.fn.jobstop(job_id)
 			callbacks.on_error("Reqest timeout")
 		end
-	end, model.timeout or default_timeout)
+	end, model_config.timeout or default_timeout)
 end
 
 return api

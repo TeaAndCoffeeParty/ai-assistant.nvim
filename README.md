@@ -146,6 +146,8 @@ source ~/.zshrc # 或你的相应文件
 - `:ChatClearHistory`：清除所有已保存的聊天会话历史。
 - `:ChatClearPrompt`：清除当前 AI 聊天输入框中的上下文信息，但不影响已发送的聊天历史。
 
+- `:ChatSelectModel`：弹出一个选择框，让你选择要使用的 AI 模型。
+
 ### 快捷键 (Keymaps)
 
 插件默认提供以下快捷键（可在配置中修改）：
@@ -159,6 +161,7 @@ source ~/.zshrc # 或你的相应文件
 | `n`      | `<leader>ddp` | `:ChatClearPrompt`      | 清除当前聊天输入框的上下文                 |
 | `n`      | `<leader>drl` | `:ChatCurrentLine`      | 引用当前行代码并打开聊天                   |
 | `n`      | `<leader>drf` | `:ChatFile`             | 引用整个文件代码并打开聊天                 |
+| `n`      | `<leader>dsm` | `:ChatSelectModel`      | 选择当前使用的 AI 模型                     |
 
 ### 聊天交互
 

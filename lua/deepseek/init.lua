@@ -84,6 +84,10 @@ function M.setup_commands()
 		M.chat_with_context("visual_selection")
 	end, { range = true, desc = "Send Visual Selection to AI Chat" })
 
+	vim.api.nvim_create_user_command("ChatSelectModel", function()
+		M.select_ai_model()
+	end, { desc = "Select AI Model" })
+
 	vim.keymap.set("n", M.config.keymaps.open_chat, function()
 		M.open_chat_ui()
 	end, { desc = "Open AI Chat Window" })
@@ -101,6 +105,7 @@ function M.setup_commands()
 	vim.keymap.set("n", M.config.keymaps.show_history, ":ChatShowHistory<CR>", { desc = "Show Chat History" })
 	vim.keymap.set("n", M.config.keymaps.clear_history, ":ChatClearHistory<CR>", { desc = "Clear Chat History" })
 	vim.keymap.set("n", M.config.keymaps.clear_prompt, ":ChatClearPrompt<CR>", { desc = "Clear Chat Prompt History" })
+	vim.keymap.set("n", M.config.keymaps.select_model, ":ChatSelectModel<CR>", { desc = "Select AI Model" })
 
 	local ai_chat_augroup = vim.api.nvim_create_augroup("AiChatHistory", { clear = true })
 	vim.api.nvim_create_autocmd("VimLeavePre", {
@@ -237,6 +242,37 @@ function M.chat_with_context(mode, start_line, end_line)
 			vim.cmd("startinsert!") -- 自动进入插入模式
 		end
 	end, 100) -- 延迟100ms
+end
+
+function M.select_ai_model()
+	local available_models = {}
+	for model_name, _ in pairs(M.config.apis) do
+		table.insert(available_models, model_name)
+	end
+
+	if #available_models == 0 then
+		vim.notify("No AI models configured.", vim.log.levels.WARN, { title = "AI Chat Warning" })
+		return
+	end
+
+	vim.ui.select(available_models, {
+		prompt = "Select AI Model:",
+		kind = "ai_model_selector", -- 方便后续如果需要自定义UI
+		format_item = function(item)
+			return item .. (item == M.config.select_model and " (current)" or "")
+		end,
+	}, function(selected_model)
+		if selected_model then
+			M.config.select_model = selected_model
+			vim.notify(
+				string.format("AI Model switched to: %s", selected_model),
+				vim.log.levels.INFO,
+				{ title = "AI Chat" }
+			)
+		else
+			vim.notify("Model selection cancelled.", vim.log.levels.INFO, { title = "AI Chat" })
+		end
+	end)
 end
 
 function M.close_windows()
