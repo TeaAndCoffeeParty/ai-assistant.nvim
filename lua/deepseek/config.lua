@@ -3,8 +3,8 @@ local M = {}
 M.defaults = {
 	enabled = true,
 	window = {
-		width = 80,
-		height = 40,
+		width = 0.6,
+		height = 0.8,
 		split_ratio = 0.2,
 	},
 	keymaps = {

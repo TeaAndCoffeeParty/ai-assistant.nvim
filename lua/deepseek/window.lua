@@ -119,27 +119,54 @@ function M.create(config)
 		state.input_buf = vim.api.nvim_create_buf(false, true)
 	end
 
-	local total_height = config.height
-	local input_height = math.floor(total_height * config.split_ratio)
-	local output_height = total_height - input_height - 1
+	local screen_width = vim.o.columns
+	local screen_height = vim.o.lines
+
+	local actual_width = math.floor(screen_width * config.width)
+	local total_actual_height = math.floor(screen_height * config.height)
+
+	if total_actual_height < 10 then
+		total_actual_height = 10
+	end
+	if actual_width < 40 then
+		actual_width = 40
+	end
+
+	local input_actual_height = math.floor(total_actual_height * config.split_ratio)
+	local output_actual_height = total_actual_height - input_actual_height - 1 -- 减去边框和分隔行
+
+	-- 确保输入输出窗口至少有最小高度
+	if input_actual_height < 3 then
+		input_actual_height = 3
+	end -- 至少3行高
+	if output_actual_height < 3 then
+		output_actual_height = 3
+	end -- 至少3行高
+
+	-- 重新计算 total_actual_height 以适应调整后的 input/output_actual_height
+	total_actual_height = input_actual_height + output_actual_height + 2
+
+	-- 窗口居中靠右计算
+	local col_start = math.floor((screen_width - actual_width))
+	local row_start = math.floor((screen_height - total_actual_height) / 2)
 
 	state.output_win = vim.api.nvim_open_win(state.output_buf, true, {
 		relative = "editor",
-		width = config.width,
-		height = output_height,
-		col = (vim.o.columns - config.width),
-		row = (vim.o.lines - total_height) / 2,
+		width = actual_width,
+		height = output_actual_height,
+		col = col_start,
+		row = row_start,
 		border = "single",
 		title = "Output Window",
 		title_pos = "center",
 	})
 
 	state.input_win = vim.api.nvim_open_win(state.input_buf, true, {
-		width = config.width,
 		relative = "editor",
-		height = input_height,
-		col = (vim.o.columns - config.width),
-		row = (vim.o.lines - total_height) / 2 + output_height + 2,
+		width = actual_width,
+		height = input_actual_height,
+		col = col_start,
+		row = row_start + output_actual_height + 2,
 		border = "single",
 		title = "Input Window（ESC to close, Enter to Submit, Ctrl+J to New Line）",
 		title_pos = "center",
