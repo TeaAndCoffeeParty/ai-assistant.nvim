@@ -33,6 +33,11 @@ M.defaults = {
 			api_key = os.getenv("DEEPSEEK_API_KEY"),
 			model = "deepseek-chat",
 		},
+		moonshot = {
+			api_url = "https://api.moonshot.cn/v1/chat/completions",
+			api_key = os.getenv("MOONSHOT_API_KEY"),
+			model = "kimi-k2-0711-preview",
+		},
 	},
 	select_model = "google_gemini",
 	history = {
