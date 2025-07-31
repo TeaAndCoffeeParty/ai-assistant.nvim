@@ -91,7 +91,6 @@ local function get_code_context_info(mode, start_line_arg, end_line_arg)
 		filetype = vim.bo[buf].filetype or "plaintext",
 	}
 end
-
 --- 通用聊天函数，带有代码上下文预填充
 --- @param mode string 'current_line' | 'visual_selection' | 'file_full' | 'file_range'
 --- @param start_line number|nil
@@ -119,11 +118,16 @@ function M_context.chat_with_context(mode, start_line, end_line)
 	vim.defer_fn(function()
 		local state = window_module.get_state() -- 调用 window 模块的函数
 		if state and state.input_buf then
-			local lines_to_set = vim.split(formatted_context_str, "\n")
-			vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, lines_to_set)
+			local lines_to_add = vim.split(formatted_context_str, "\n")
 
-			-- 将光标移动到 "My question is:" 之后，方便用户输入
-			vim.api.nvim_win_set_cursor(state.input_win, { #lines_to_set, 0 })
+			-- 在缓冲区头部插入新行，而不是替换整个缓冲区
+			-- (0, 0) 表示在第0行（即第一行）之前插入
+			vim.api.nvim_buf_set_lines(state.input_buf, 0, 0, false, lines_to_add)
+
+			-- 将光标移动到 "My question is:" 之后
+			-- 现在 "My question is:" 所在行是新插入内容中的最后一行
+			local cursor_line = #lines_to_add -- 新插入内容的行数就是其最后一行
+			vim.api.nvim_win_set_cursor(state.input_win, { cursor_line, 0 })
 			vim.cmd("startinsert!") -- 自动进入插入模式
 		end
 	end, 100) -- 延迟100ms
