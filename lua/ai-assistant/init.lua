@@ -93,11 +93,27 @@ function M.submit_input()
 		return
 	end
 
-	window.echo_user_input(input_data.raw_input_lines)
-
 	local full_response = ""
 	local messages = history.insertHistory("user", input_data.full_prompt)
+
+	local send_tokens = context.calculate_total_tokens(messages, 4)
+	if send_tokens > M.config.max_prompt_tokens then
+		local msg = string.format(
+			"Your prompt is estimated to be %d tokens, which exceeds the configured limit of %d tokens.\n"
+				.. "Sending very large prompts may incur higher costs or hit model context limits.\n"
+				.. "Do you want to send it anyway?(Input 1[Confirm], 2[Cancel])",
+			send_tokens,
+			M.config.max_prompt_tokens
+		)
+		local choice = vim.fn.confirm(msg, "1:Yes\n2:No", 2) -- 默认选择 "No"
+		if choice ~= 1 then -- 如果用户没有选择 "Yes"
+			vim.notify("Prompt submission cancelled.", vim.log.levels.INFO)
+			return
+		end
+	end
+
 	vim.notify("Querying AI...", vim.log.levels.INFO, { title = "AI Chat" })
+	window.echo_user_input(input_data.raw_input_lines)
 
 	request_api.query_stream(messages, {
 		on_data = function(content)

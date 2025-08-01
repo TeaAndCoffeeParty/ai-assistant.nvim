@@ -45,6 +45,8 @@ M.defaults = {
 		chat_max_count = 10,
 	},
 	max_context_lines = 1000,
+	max_prompt_tokens = 5000,
+	max_prompt_token_ratio = 2, -- English:3.5, Chines 2 or 2.5
 }
 
 M.config = {}

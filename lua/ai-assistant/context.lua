@@ -133,4 +133,29 @@ function M_context.chat_with_context(mode, start_line, end_line)
 	end, 100) -- 延迟100ms
 end
 
+--- Calculates the approximate total tokens for a list of messages.
+--- This is a rough character-based estimate.
+---
+--- @param messages table A list of message tables, where each table has a 'content' field.
+---                      Example: {{role = "system", content = "You are a helpful assistant."},
+---                                {role = "user", content = "Hello!"},
+---                                {role = "assistant", content = "Hi there!"}}
+--- @param token_char_ratio number The approximate number of characters per token.
+---                               (e.g., 4 for English, 2-3 for Chinese characters)
+--- @return number The estimated total token count.
+function M_context.calculate_total_tokens(messages, token_char_ratio)
+	local total_char_count = 0
+	token_char_ratio = token_char_ratio or 4 -- Fallback default if not provided
+
+	if messages then
+		for _, message in ipairs(messages) do
+			if message.content and type(message.content) == "string" then
+				total_char_count = total_char_count + #message.content
+			end
+		end
+	end
+
+	return math.ceil(total_char_count / token_char_ratio)
+end
+
 return M_context
