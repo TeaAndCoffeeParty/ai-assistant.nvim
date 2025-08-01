@@ -51,33 +51,75 @@ M.chat_with_context = function(mode, start_line, end_line)
 end
 
 function M.select_ai_model()
-	local available_models = {}
-	for model_name, _ in pairs(M.config.apis) do
-		table.insert(available_models, model_name)
+	local available_providers = {}
+	for provider_name, _ in pairs(M.config.apis) do
+		table.insert(available_providers, provider_name)
 	end
 
-	if #available_models == 0 then
-		vim.notify("No AI models configured.", vim.log.levels.WARN, { title = "AI Chat Warning" })
+	if #available_providers == 0 then
+		vim.notify("No AI model providers configured.", vim.log.levels.WARN, { title = "AI Chat Warning" })
 		return
 	end
 
-	vim.ui.select(available_models, {
-		prompt = "Select AI Model:",
-		kind = "ai_model_selector", -- 方便后续如果需要自定义UI
+	-- Step 1: Select AI Provider
+	vim.ui.select(available_providers, {
+		prompt = "Select AI Provider:",
+		kind = "ai_provider_selector",
 		format_item = function(item)
 			return item .. (item == M.config.select_model and " (current)" or "")
 		end,
-	}, function(selected_model)
-		if selected_model then
-			M.config.select_model = selected_model
-			vim.notify(
-				string.format("AI Model switched to: %s", selected_model),
-				vim.log.levels.INFO,
-				{ title = "AI Chat" }
-			)
-		else
-			vim.notify("Model selection cancelled.", vim.log.levels.INFO, { title = "AI Chat" })
+	}, function(selected_provider)
+		if not selected_provider then
+			vim.notify("Provider selection cancelled.", vim.log.levels.INFO, { title = "AI Chat" })
+			return
 		end
+
+		-- Update the globally selected provider first
+		M.config.select_model = selected_provider
+
+		local api_config = M.config.apis[selected_provider]
+		if not api_config or not api_config.available_models or #api_config.available_models == 0 then
+			vim.notify(
+				string.format("No models available for provider: %s", selected_provider),
+				vim.log.levels.WARN,
+				{ title = "AI Chat Warning" }
+			)
+			return
+		end
+
+		local models_for_current_provider = api_config.available_models
+
+		-- Step 2: Select Specific Model for the chosen Provider
+		vim.ui.select(models_for_current_provider, {
+			prompt = string.format("Select Model for %s:", selected_provider),
+			kind = "ai_model_selector_for_provider",
+			format_item = function(item)
+				return item .. (item == api_config.model and " (current)" or "")
+			end,
+		}, function(selected_model_name)
+			if selected_model_name then
+				local success, err = config.set_api_model(selected_provider, selected_model_name)
+				if success then
+					vim.notify(
+						string.format("AI Model switched to: %s -> %s", selected_provider, selected_model_name),
+						vim.log.levels.INFO,
+						{ title = "AI Chat" }
+					)
+				else
+					vim.notify(
+						string.format("Failed to set model for %s: %s", selected_provider, err),
+						vim.log.levels.ERROR,
+						{ title = "AI Chat Error" }
+					)
+				end
+			else
+				vim.notify(
+					string.format("Model selection for %s cancelled.", selected_provider),
+					vim.log.levels.INFO,
+					{ title = "AI Chat" }
+				)
+			end
+		end)
 	end)
 end
 

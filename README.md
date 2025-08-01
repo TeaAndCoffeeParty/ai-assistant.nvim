@@ -34,6 +34,8 @@ return {
     select_model = "google_gemini", -- model list "google_gemini", "aliyun_qwen", "deepseek"
     timeout = 80000,
     -- max_context_lines = 500, -- 引用整个文件时最大行数
+    -- max_prompt_tokens = 5000, -- 预警token个数
+    -- max_prompt_token_ratio = 2, -- English:3.5, Chines 2 or 2.5
   },
   dependencies = {
     "nvim-lua/plenary.nvim",
@@ -145,7 +147,6 @@ source ~/.zshrc # 或你的相应文件
 - `:ChatShowHistory`：显示所有聊天会话历史。
 - `:ChatClearHistory`：清除所有已保存的聊天会话历史。
 - `:ChatClearPrompt`：清除当前 AI 聊天输入框中的上下文信息，但不影响已发送的聊天历史。
-
 - `:ChatSelectModel`：弹出一个选择框，让你选择要使用的 AI 模型。
 
 ### 快捷键 (Keymaps)
@@ -161,7 +162,7 @@ source ~/.zshrc # 或你的相应文件
 | `n`      | `<leader>ddp` | `:ChatClearPrompt`      | 清除当前聊天输入框的上下文                 |
 | `n`      | `<leader>drl` | `:ChatCurrentLine`      | 引用当前行代码并打开聊天                   |
 | `n`      | `<leader>drf` | `:ChatFile`             | 引用整个文件代码并打开聊天                 |
-| `n`      | `<leader>dsm` | `:ChatSelectModel`      | 选择当前使用的 AI 模型                     |
+| `n`      | `<leader>ds`  | `:ChatSelectModel`      | 选择当前使用的 AI 模型                     |
 
 ### 聊天交互
 
