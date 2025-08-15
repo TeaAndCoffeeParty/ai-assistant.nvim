@@ -117,7 +117,7 @@ function M_context.chat_with_context(mode, start_line, end_line)
 	-- 使用 defer_fn 确保窗口已经创建
 	vim.defer_fn(function()
 		local state = window_module.get_state() -- 调用 window 模块的函数
-		if state and state.input_buf then
+		if state and state.input_buf and vim.api.nvim_buf_is_valid(state.input_buf) then
 			local lines_to_add = vim.split(formatted_context_str, "\n")
 
 			-- 在缓冲区头部插入新行，而不是替换整个缓冲区
