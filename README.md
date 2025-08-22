@@ -15,7 +15,7 @@
   - 保存和加载聊天会话历史，方便后续回顾。
   - 清除当前会话历史或清除发送给 AI 的上下文。
 - **流式响应：** AI 回复以流式（逐字）方式显示，提供更流畅的用户体验。
-- **高度可配置：** 灵活的配置选项，包括 API 密钥、模型选择、窗口布局、快捷键等。
+- **高度可配置：** 灵活的配置选项，包括 API 密钥、模型选择、窗口布局等。
 
 ## 📦 安装
 
@@ -76,18 +76,6 @@ require('ai-assistant').setup({
     width = 0.6,         -- 聊天窗口宽度占屏幕宽度的比例 (0.0 - 1.0)
     height = 0.8,        -- 聊天窗口高度占屏幕高度的比例 (0.0 - 1.0)
     split_ratio = 0.2,   -- 输入窗口高度占总窗口高度的比例 (0.0 - 1.0)
-  },
-
-  -- 快捷键配置
-  keymaps = {
-    open_chat = "<leader>dc",         -- 打开 AI 聊天窗口 (或发送 Visual 选中内容)
-    submit = "<C-Enter>",             -- 在输入窗口中提交消息
-    show_history = "<leader>dh",      -- 显示聊天历史窗口
-    clear_history = "<leader>ddh",    -- 清除所有聊天历史
-    clear_prompt = "<leader>ddp",     -- 清除当前发送给 AI 的上下文（不是聊天历史）
-    chat_current_line = "<leader>drl",-- 引用当前行代码并打开聊天
-    chat_file = "<leader>drf",        -- 引用整个文件代码并打开聊天
-    -- 引用指定行范围目前通过命令 `:ChatRange <start> <end>` 使用
   },
 
   -- AI API 配置
@@ -151,22 +139,56 @@ source ~/.zshrc # 或你的相应文件
 
 ### 快捷键 (Keymaps)
 
-插件默认提供以下快捷键（可在配置中修改）：
+**重要提示：本插件不再提供默认快捷键绑定。你需要手动配置你喜欢的快捷键来调用上述命令。**
 
-| 模式     | 快捷键 (默认) | 命令                    | 描述                                       |
-| :------- | :------------ | :---------------------- | :----------------------------------------- |
-| `n`, `v` | `<leader>dc`  | `:Chat` / `:ChatVisual` | `n`：打开聊天窗口；`v`：发送选中内容并打开 |
-| `i`      | `<C-Enter>`   | 提交消息                | 在聊天输入窗口中发送消息                   |
-| `n`      | `<leader>dh`  | `:ChatShowHistory`      | 显示聊天历史                               |
-| `n`      | `<leader>ddh` | `:ChatClearHistory`     | 清除所有聊天历史                           |
-| `n`      | `<leader>ddp` | `:ChatClearPrompt`      | 清除当前聊天输入框的上下文                 |
-| `n`      | `<leader>drl` | `:ChatCurrentLine`      | 引用当前行代码并打开聊天                   |
-| `n`      | `<leader>drf` | `:ChatFile`             | 引用整个文件代码并打开聊天                 |
-| `n`      | `<leader>ds`  | `:ChatSelectModel`      | 选择当前使用的 AI 模型                     |
+以下是一些绑定快捷键的示例，你可以将其添加到你的 `init.lua` 或插件配置中（例如，在 `lazy.nvim` 的 `config` 函数里）：
+
+```lua
+  -- 示例：在普通模式下绑定快捷键
+  vim.keymap.set('n', '<leader>cc', '<cmd>Chat<CR>', { desc = 'Open AI Chat Window' })
+  vim.keymap.set('v', '<leader>cc', '<cmd>ChatVisual<CR>', { desc = 'Send Visual Selection to Chat' })
+
+  -- 示例：发送代码上下文
+  vim.keymap.set('n', '<leader>cl', '<cmd>ChatCurrentLine<CR>', { desc = 'Send Current Line to Chat' })
+  vim.keymap.set('n', '<leader>cf', '<cmd>ChatFile<CR>', { desc = 'Send Entire File to Chat' })
+
+  -- 示例：历史管理
+  vim.keymap.set('n', '<leader>ch', '<cmd>ChatShowHistory<CR>', { desc = 'Show Chat History' })
+  vim.keymap.set('n', '<leader>cH', '<cmd>ChatClearHistory<CR>', { desc = 'Clear All Chat History' }) -- 大写H表示清除所有
+  vim.keymap.set('n', '<leader>cp', '<cmd>ChatClearPrompt<CR>', { desc = 'Clear Chat Prompt Context' })
+
+  -- 示例：模型选择
+  vim.keymap.set('n', '<leader>cs', '<cmd>ChatSelectModel<CR>', { desc = 'Select AI Model' })
+
+  -- 聊天输入窗口中的提交消息快捷键 (此快捷键由插件UI内部处理，无需额外绑定)
+  -- 默认是 <C-Enter>，用于在聊天输入框中发送消息
+```
+
+**关于 `which-key.nvim` 集成：**
+
+如果你使用 `which-key.nvim`，你可以在绑定快捷键的同时，为它们注册描述和图标，以获得更好的视觉提示。例如：
+
+```lua
+  -- 示例 which-key.nvim 配置 (假设你已经安装并配置了 which-key)
+  local wk = require('which-key')
+  wk.add({
+    -- ai-assistant
+    { "<leader>a", group = "AI Assistant", icon = "🤖 " },
+    { "<leader>ao", ":Chat<CR>", desc = "Open Chat", icon = "💬 ", mode = "n" },
+    { "<leader>al", ":ChatCurrentLine<CR>", desc = "Send Current Line", icon = "📎 ", mode = "n" },
+    { "<leader>af", ":ChatFile<CR>", desc = "Send Entire File", icon = "📁 ", mode = "n" },
+    { "<leader>ah", ":ChatShowHistory<CR>", desc = "Show History", icon = "📜 ", mode = "n" },
+    { "<leader>ac", ":ChatClearHistory<CR>", desc = "Clear History", icon = "🗑 ", mode = "n" },
+    { "<leader>ap", ":ChatClearPrompt<CR>", desc = "Clear Prompt Context", icon = "🧹 ", mode = "n" },
+    { "<leader>am", ":ChatSelectModel<CR>", desc = "Select AI Model", icon = "🧠 ", mode = "n" },
+    -- Visual 模式
+    { "<leader>av", ":ChatVisual<CR>", desc = "Send Visual Selection", icon = "🔍 ", mode = "v" },
+  })
+```
 
 ### 聊天交互
 
-1. **打开聊天窗口：** 使用 `:Chat` 命令或 `open_chat` 快捷键。
+1. **打开聊天窗口：** 使用你配置的快捷键（例如 `<leader>ao`）或 `:Chat` 命令。
 2. **输入消息：** 在底部的输入框中输入你的问题或指令。
    - 如果你使用了引用代码功能，输入框会预填充一个 Markdown 代码块。你可以在代码块下方输入你的具体问题。
 3. **发送消息：** 在输入框中按下 `submit` 快捷键 (`<C-Enter>`)。

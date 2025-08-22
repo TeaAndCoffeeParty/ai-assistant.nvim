@@ -54,25 +54,6 @@ function M.setup(main_plugin, history_module)
 		P.select_ai_model()
 	end, { desc = "Select AI Model" })
 
-	vim.keymap.set("n", P.config.keymaps.open_chat, function()
-		P.open_chat_ui()
-	end, { desc = "Open AI Chat Window" })
-
-	vim.keymap.set("v", P.config.keymaps.open_chat, ":ChatVisual<CR>", { desc = "Send Selected Content to Chat" })
-
-	vim.keymap.set(
-		"n",
-		P.config.keymaps.chat_current_line,
-		":ChatCurrentLine<CR>",
-		{ desc = "Send Current Line to Chat" }
-	)
-	vim.keymap.set("n", P.config.keymaps.chat_file, ":ChatFile<CR>", { desc = "Send Entire File to Chat" })
-
-	vim.keymap.set("n", P.config.keymaps.show_history, ":ChatShowHistory<CR>", { desc = "Show Chat History" })
-	vim.keymap.set("n", P.config.keymaps.clear_history, ":ChatClearHistory<CR>", { desc = "Clear Chat History" })
-	vim.keymap.set("n", P.config.keymaps.clear_prompt, ":ChatClearPrompt<CR>", { desc = "Clear Chat Prompt History" })
-	vim.keymap.set("n", P.config.keymaps.select_model, ":ChatSelectModel<CR>", { desc = "Select AI Model" })
-
 	local ai_chat_augroup = vim.api.nvim_create_augroup("AiChatHistory", { clear = true })
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		group = ai_chat_augroup,

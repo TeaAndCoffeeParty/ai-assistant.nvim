@@ -7,16 +7,6 @@ M.defaults = {
 		height = 0.8,
 		split_ratio = 0.2,
 	},
-	keymaps = {
-		open_chat = "<leader>dc",
-		submit = "<C-Enter>",
-		show_history = "<leader>dh",
-		clear_history = "<leader>ddh",
-		clear_prompt = "<leader>ddp",
-		chat_current_line = "<leader>drl",
-		chat_file = "<leader>drf",
-		select_model = "<leader>ds",
-	},
 	apis = {
 		google_gemini = {
 			api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
