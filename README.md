@@ -176,6 +176,8 @@ source ~/.zshrc # 或你的相应文件
 
 欢迎任何形式的贡献！如果你有任何功能建议、Bug 报告或代码改进，请随时提交 Pull Request 或 Issue。
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/TeaAndCoffeeParty/ai-assistant.nvim)
+
 ## 📜 许可证
 
 本项目采用 [MIT 许可证](LICENSE)。
