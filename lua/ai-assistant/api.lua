@@ -86,6 +86,7 @@ function api.query_stream(messages, callbacks)
 
 	-- 调试信息
 	-- print("Starting stream request to:", model.api_url)
+	vim.notify("Querying " .. model_config.model .. "...", vim.log.levels.INFO)
 
 	local cmd = {
 		"curl",

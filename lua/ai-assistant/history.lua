@@ -315,7 +315,6 @@ function M.load_history()
 		if ok and type(data) == "table" then
 			M.chat_history = data
 			M.context_start_index = 1 -- 加载历史后，默认从头开始上下文
-			vim.notify("History has been loaded", vim.log.levels.INFO)
 		else
 			vim.notify("Load History failed or invalid content. Starting with an empty history.", vim.log.levels.WARN)
 			M.chat_history = {}

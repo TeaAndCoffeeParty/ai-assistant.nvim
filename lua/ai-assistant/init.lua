@@ -154,7 +154,6 @@ function M.submit_input()
 		end
 	end
 
-	vim.notify("Querying AI...", vim.log.levels.INFO, { title = "AI Chat" })
 	window.echo_user_input(input_data.raw_input_lines)
 
 	request_api.query_stream(messages, {
@@ -171,8 +170,8 @@ function M.submit_input()
 			window.safe_buf_update("\n\n-------------------\n")
 			--清空输入区
 			vim.api.nvim_buf_set_lines(state.input_buf, 0, -1, false, { "" })
-			vim.api.nvim_win_set_cursor(state.input_win, { 1, 0 })
-			vim.cmd("startinsert!")
+			vim.api.nvim_set_current_win(state.output_win)
+			vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
 			vim.bo[state.output_buf].filetype = "markdown"
 		end,
 		on_error = function(err)
