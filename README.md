@@ -36,6 +36,11 @@ return {
     -- max_context_lines = 500, -- 引用整个文件时最大行数
     -- max_prompt_tokens = 5000, -- 预警token个数
     -- max_prompt_token_ratio = 2, -- English:3.5, Chines 2 or 2.5
+    -- apis = {
+    --  google_gemini = {
+    --    model = "gemini-2.5-pro",
+    --  },
+    --},
   },
   dependencies = {
     "nvim-lua/plenary.nvim",
