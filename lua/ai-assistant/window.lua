@@ -90,6 +90,36 @@ local function setup_buffers()
 		"<CR>",
 		{ noremap = true, silent = true, nowait = true, desc = "插入新行" }
 	)
+
+	-- 输出窗口映射
+	vim.api.nvim_buf_set_keymap(
+		state.output_buf,
+		"n",
+		"<Esc>",
+		"<cmd>lua require('ai-assistant').close_windows()<CR>", -- 关闭窗口
+		{ noremap = true, silent = true, nowait = true, desc = "Close Chat Window" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.output_buf,
+		"n",
+		"q",
+		"<cmd>lua require('ai-assistant').close_windows()<CR>", -- 关闭窗口
+		{ noremap = true, silent = true, nowait = true, desc = "Close Chat Window" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.output_buf,
+		"n",
+		"i",
+		"<cmd>lua vim.api.nvim_set_current_win(" .. state.input_win .. ")<CR>", -- 切换到输入窗口
+		{ noremap = true, silent = true, nowait = true, desc = "Switch to Input Window" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.output_buf,
+		"n",
+		"<CR>",
+		"<cmd>lua vim.api.nvim_set_current_win(" .. state.input_win .. ")<CR>", -- 按回车也切换到输入窗口，方便操作
+		{ noremap = true, silent = true, nowait = true, desc = "Switch to Input Window" }
+	)
 end
 
 local function setup_autocmd()
@@ -157,7 +187,7 @@ function M.create(config)
 		col = col_start,
 		row = row_start,
 		border = "single",
-		title = "Output Window",
+		title = "Output Window (ESC to close, Enter/i to Input Window)",
 		title_pos = "center",
 	})
 
