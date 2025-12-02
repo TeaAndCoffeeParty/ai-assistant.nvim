@@ -32,7 +32,7 @@ function M.setup(opts)
 	assert(model_config.model, "Please Config model")
 
 	-- 设置快捷键,命令
-	commands.setup(M, history)
+	commands.setup(M)
 
 	history.load_history()
 

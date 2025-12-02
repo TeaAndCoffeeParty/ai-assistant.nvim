@@ -9,6 +9,7 @@ local state = {
 	cached_content = nil,
 	config = nil, -- 保存配置以便重绘时使用
 	autocmd_group_id = nil, -- 用于管理自动命令的ID
+	is_full_width = false, -- 新增：是否当前处于全宽模式 (95%)
 }
 
 local function setup_buffers()
@@ -23,7 +24,7 @@ local function setup_buffers()
 	input_buf_obj.filetype = "text"
 	input_buf_obj.modifiable = true
 	input_buf_obj.bufhidden = "wipe"
-	vim.opt_local.spell = false -- 这行应该作用于当前窗口，而不是全局的
+	vim.api.nvim_buf_set_option(state.input_buf, "spell", false) -- 确保作用于 input_buf
 
 	-- 输入窗口设置
 	input_win_obj.number = false
@@ -37,7 +38,7 @@ local function setup_buffers()
 	output_buf_obj.modifiable = true
 	output_buf_obj.bufhidden = "wipe"
 	output_buf_obj.syntax = "off"
-	vim.api.nvim_buf_set_option(state.output_buf, "spell", false) -- 注意这里，应该是 output_buf
+	vim.api.nvim_buf_set_option(state.output_buf, "spell", false) -- 确保作用于 output_buf
 
 	-- 输出窗口设置
 	output_win_obj.number = false
@@ -128,6 +129,7 @@ local function setup_buffers()
 		"<CR>",
 		"<cmd>lua vim.api.nvim_set_current_win(" .. state.input_win .. ")<CR>", -- 按回车也切换到输入窗口，方便操作
 		{ noremap = true, silent = true, nowait = true, desc = "Switch to Input Window" }
+	)
 end
 
 -- 负责设置所有自动命令，包括 FileType 和 VimResized
@@ -178,7 +180,13 @@ function M.resize_windows()
 	local screen_width = vim.o.columns
 	local screen_height = vim.o.lines
 
-	local actual_width = math.floor(screen_width * config.width)
+	local actual_width
+	if state.is_full_width then
+		actual_width = math.floor(screen_width * 0.95) -- 95% 宽度
+	else
+		actual_width = math.floor(screen_width * config.width) -- 原始配置宽度
+	end
+
 	local total_actual_height = math.floor(screen_height * config.height)
 
 	-- 应用最小尺寸限制
@@ -231,6 +239,20 @@ function M.resize_windows()
 	vim.cmd("startinsert!") -- 重新进入插入模式
 end
 
+-- 新增函数：切换窗口宽度模式
+function M.toggle_width()
+	if not state.input_win or not vim.api.nvim_win_is_valid(state.input_win) then
+		vim.notify("AI Assistant window is not open.", vim.log.levels.WARN)
+		return
+	end
+
+	state.is_full_width = not state.is_full_width -- 切换状态
+	M.resize_windows() -- 触发重绘
+
+	local width_desc = state.is_full_width and "95%" or "configured (" .. (state.config.width * 100) .. "%)"
+	vim.notify("AI Assistant width toggled to " .. width_desc, vim.log.levels.INFO)
+end
+
 -- 打开聊天窗口
 function M.create(config)
 	-- 如果窗口已经存在，则聚焦到输入窗口
@@ -242,6 +264,7 @@ function M.create(config)
 	end
 
 	state.config = config -- 保存配置
+	state.is_full_width = false -- 默认以配置宽度打开
 
 	-- 创建两个缓冲区
 	if not state.output_buf or not vim.api.nvim_buf_is_valid(state.output_buf) then
@@ -251,17 +274,24 @@ function M.create(config)
 		state.input_buf = vim.api.nvim_create_buf(false, true)
 	end
 
+	-- 初次创建时，根据 is_full_width 决定宽度
 	local screen_width = vim.o.columns
 	local screen_height = vim.o.lines
 
-	local actual_width = math.floor(screen_width * config.width)
+	local actual_width_on_create
+	if state.is_full_width then
+		actual_width_on_create = math.floor(screen_width * 0.95)
+	else
+		actual_width_on_create = math.floor(screen_width * config.width)
+	end
+
 	local total_actual_height = math.floor(screen_height * config.height)
 
 	if total_actual_height < 10 then
 		total_actual_height = 10
 	end
-	if actual_width < 40 then
-		actual_width = 40
+	if actual_width_on_create < 40 then
+		actual_width_on_create = 40
 	end
 
 	local input_actual_height = math.floor(total_actual_height * config.split_ratio)
@@ -279,12 +309,12 @@ function M.create(config)
 	total_actual_height = input_actual_height + output_actual_height + 2
 
 	-- 窗口居中靠右计算
-	local col_start = math.floor((screen_width - actual_width))
+	local col_start = math.floor((screen_width - actual_width_on_create))
 	local row_start = math.floor((screen_height - total_actual_height) / 2)
 
 	state.output_win = vim.api.nvim_open_win(state.output_buf, true, {
 		relative = "editor",
-		width = actual_width,
+		width = actual_width_on_create, -- 使用计算出的宽度
 		height = output_actual_height,
 		col = col_start,
 		row = row_start,
@@ -295,7 +325,7 @@ function M.create(config)
 
 	state.input_win = vim.api.nvim_open_win(state.input_buf, true, {
 		relative = "editor",
-		width = actual_width,
+		width = actual_width_on_create, -- 使用计算出的宽度
 		height = input_actual_height,
 		col = col_start,
 		row = row_start + output_actual_height + 2,
@@ -344,6 +374,7 @@ function M.close()
 	state.input_win = nil
 	state.output_win = nil
 	state.config = nil -- 清除配置
+	state.is_full_width = false -- 关闭时重置为默认值
 
 	-- 清理自动命令
 	if state.autocmd_group_id then
