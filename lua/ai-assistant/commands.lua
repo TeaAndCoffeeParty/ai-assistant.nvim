@@ -1,22 +1,25 @@
 local M = {}
 
+local window_module = require("ai-assistant.window")
+local history_module = require("ai-assistant.history")
+
 -- 设置快捷键函数
-function M.setup(main_plugin, history_module)
-	local history = history_module
+function M.setup(main_plugin)
+	local history_module = history_module
 	local P = main_plugin
 
 	vim.api.nvim_create_user_command("ChatClearHistory", function()
-		history.clearHistory()
+		history_module.clearHistory()
 		vim.notify("AI Chat history cleared")
 	end, { desc = "Clear AI Chat History" })
 
 	vim.api.nvim_create_user_command("ChatClearPrompt", function()
-		history.resetPromptContext()
+		history_module.resetPromptContext()
 		vim.notify("AI Chat prompt context cleared")
 	end, { desc = "Clear AI Chat Prompt Context" })
 
 	vim.api.nvim_create_user_command("ChatShowHistory", function()
-		history.showHistory()
+		history_module.showHistory()
 	end, { desc = "Show AI Chat History" })
 
 	vim.api.nvim_create_user_command("Chat", function()
@@ -54,13 +57,17 @@ function M.setup(main_plugin, history_module)
 		P.select_ai_model()
 	end, { desc = "Select AI Model" })
 
+	vim.api.nvim_create_user_command("ChatToggleWidth", function()
+		window_module.toggle_width()
+	end, { desc = "Toggle AI Chat Window Width (Configured / 95%)" })
+
 	local ai_chat_augroup = vim.api.nvim_create_augroup("AiChatHistory", { clear = true })
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		group = ai_chat_augroup,
 		pattern = "*",
 		callback = function()
-			if history and type(history.save_history) == "function" then
-				history.save_history()
+			if history_module and type(history.save_history) == "function" then
+				history_module.save_history()
 			end
 		end,
 		desc = "Save AI chat history on Neovim exit",

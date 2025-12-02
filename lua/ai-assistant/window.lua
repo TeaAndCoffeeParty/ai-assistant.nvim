@@ -7,6 +7,9 @@ local state = {
 	input_buf = nil,
 	output_buf = nil,
 	cached_content = nil,
+	config = nil, -- 保存配置以便重绘时使用
+	autocmd_group_id = nil, -- 用于管理自动命令的ID
+	is_full_width = false, -- 新增：是否当前处于全宽模式 (95%)
 }
 
 local function setup_buffers()
@@ -21,7 +24,7 @@ local function setup_buffers()
 	input_buf_obj.filetype = "text"
 	input_buf_obj.modifiable = true
 	input_buf_obj.bufhidden = "wipe"
-	vim.opt_local.spell = false
+	vim.api.nvim_buf_set_option(state.input_buf, "spell", false) -- 确保作用于 input_buf
 
 	-- 输入窗口设置
 	input_win_obj.number = false
@@ -35,7 +38,7 @@ local function setup_buffers()
 	output_buf_obj.modifiable = true
 	output_buf_obj.bufhidden = "wipe"
 	output_buf_obj.syntax = "off"
-	vim.api.nvim_buf_set_option(state.input_buf, "spell", false)
+	vim.api.nvim_buf_set_option(state.output_buf, "spell", false) -- 确保作用于 output_buf
 
 	-- 输出窗口设置
 	output_win_obj.number = false
@@ -87,8 +90,15 @@ local function setup_buffers()
 		state.input_buf,
 		"i",
 		"<S-CR>",
-		"<CR>",
+		"<CR>", -- Shift+Enter to insert a literal newline
 		{ noremap = true, silent = true, nowait = true, desc = "插入新行" }
+	)
+	vim.api.nvim_buf_set_keymap(
+		state.input_buf,
+		"i",
+		"<C-j>",
+		"<CR>",
+		{ noremap = true, silent = true, nowait = true, desc = "插入新行 (Ctrl+J)" }
 	)
 
 	-- 输出窗口映射
@@ -122,39 +132,64 @@ local function setup_buffers()
 	)
 end
 
-local function setup_autocmd()
+-- 负责设置所有自动命令，包括 FileType 和 VimResized
+local function setup_autocmds_for_windows()
+	-- 清除旧的 Autocmd Group，确保每次只注册一次
+	if state.autocmd_group_id then
+		vim.api.nvim_del_augroup_by_id(state.autocmd_group_id)
+		state.autocmd_group_id = nil
+	end
+
+	state.autocmd_group_id = vim.api.nvim_create_augroup("AIAssistantWinGroup", { clear = true })
+
+	-- FileType 自动命令
 	vim.api.nvim_create_autocmd("FileType", {
+		group = state.autocmd_group_id,
 		pattern = { "markdown", "text" },
 		callback = function()
 			if vim.api.nvim_get_current_buf() == state.output_buf then
 				vim.opt_local.spell = false
 			end
 		end,
+		desc = "Disable spell for AI Assistant output buffer",
+	})
+
+	-- VimResized 自动命令
+	vim.api.nvim_create_autocmd("VimResized", {
+		group = state.autocmd_group_id,
+		callback = function()
+			M.resize_windows() -- 调用重绘函数
+		end,
+		desc = "Resize AI Assistant windows on VimResized",
 	})
 end
 
--- 打开聊天窗口
-function M.create(config)
-	-- 如果窗口已经存在，则聚焦到输入窗口
-	if state.input_win and vim.api.nvim_win_is_valid(state.input_win) then
-		M.close()
-		return
+-- 新增函数：根据当前屏幕尺寸和配置重新调整窗口大小
+function M.resize_windows()
+	if
+		not state.input_win
+		or not vim.api.nvim_win_is_valid(state.input_win)
+		or not state.output_win
+		or not vim.api.nvim_win_is_valid(state.output_win)
+		or not state.config
+	then
+		return -- 窗口未打开或配置不存在，无需重绘
 	end
 
-	-- 创建两个缓冲区
-	if not state.output_buf or not vim.api.nvim_buf_is_valid(state.output_buf) then
-		state.output_buf = vim.api.nvim_create_buf(false, true)
-	end
-	if not state.input_buf or not vim.api.nvim_buf_is_valid(state.input_buf) then
-		state.input_buf = vim.api.nvim_create_buf(false, true)
-	end
-
+	local config = state.config
 	local screen_width = vim.o.columns
 	local screen_height = vim.o.lines
 
-	local actual_width = math.floor(screen_width * config.width)
+	local actual_width
+	if state.is_full_width then
+		actual_width = math.floor(screen_width * 0.95) -- 95% 宽度
+	else
+		actual_width = math.floor(screen_width * config.width) -- 原始配置宽度
+	end
+
 	local total_actual_height = math.floor(screen_height * config.height)
 
+	-- 应用最小尺寸限制
 	if total_actual_height < 10 then
 		total_actual_height = 10
 	end
@@ -168,21 +203,116 @@ function M.create(config)
 	-- 确保输入输出窗口至少有最小高度
 	if input_actual_height < 3 then
 		input_actual_height = 3
-	end -- 至少3行高
+	end
 	if output_actual_height < 3 then
 		output_actual_height = 3
-	end -- 至少3行高
+	end
+
+	-- 重新计算 total_actual_height 以适应调整后的 input/output_actual_height
+	total_actual_height = input_actual_height + output_actual_height + 2
+
+	-- 窗口居中靠右计算 (保持你原有的逻辑)
+	local col_start = math.floor((screen_width - actual_width))
+	local row_start = math.floor((screen_height - total_actual_height) / 2)
+
+	-- 获取当前窗口配置，然后更新尺寸和位置，以保留其他如 border, title 等设置
+	local output_win_cfg = vim.api.nvim_win_get_config(state.output_win)
+	local input_win_cfg = vim.api.nvim_win_get_config(state.input_win)
+
+	output_win_cfg.width = actual_width
+	output_win_cfg.height = output_actual_height
+	output_win_cfg.col = col_start
+	output_win_cfg.row = row_start
+
+	input_win_cfg.width = actual_width
+	input_win_cfg.height = input_actual_height
+	input_win_cfg.col = col_start
+	input_win_cfg.row = row_start + output_actual_height + 2
+
+	vim.api.nvim_win_set_config(state.output_win, output_win_cfg)
+	vim.api.nvim_win_set_config(state.input_win, input_win_cfg)
+
+	-- 重新设置光标位置
+	local line_count = vim.api.nvim_buf_line_count(state.output_buf)
+	vim.api.nvim_win_set_cursor(state.output_win, { line_count, 0 })
+	vim.api.nvim_set_current_win(state.input_win)
+	vim.cmd("startinsert!") -- 重新进入插入模式
+end
+
+-- 新增函数：切换窗口宽度模式
+function M.toggle_width()
+	if not state.input_win or not vim.api.nvim_win_is_valid(state.input_win) then
+		vim.notify("AI Assistant window is not open.", vim.log.levels.WARN)
+		return
+	end
+
+	state.is_full_width = not state.is_full_width -- 切换状态
+	M.resize_windows() -- 触发重绘
+
+	local width_desc = state.is_full_width and "95%" or "configured (" .. (state.config.width * 100) .. "%)"
+	vim.notify("AI Assistant width toggled to " .. width_desc, vim.log.levels.INFO)
+end
+
+-- 打开聊天窗口
+function M.create(config)
+	-- 如果窗口已经存在，则聚焦到输入窗口
+	if state.input_win and vim.api.nvim_win_is_valid(state.input_win) then
+		M.close() -- 先关闭再重新创建，或者直接聚焦
+		return
+	end
+
+	state.config = config -- 保存配置
+	state.is_full_width = false -- 默认以配置宽度打开
+
+	-- 创建两个缓冲区
+	if not state.output_buf or not vim.api.nvim_buf_is_valid(state.output_buf) then
+		state.output_buf = vim.api.nvim_create_buf(false, true)
+	end
+	if not state.input_buf or not vim.api.nvim_buf_is_valid(state.input_buf) then
+		state.input_buf = vim.api.nvim_create_buf(false, true)
+	end
+
+	-- 初次创建时，根据 is_full_width 决定宽度
+	local screen_width = vim.o.columns
+	local screen_height = vim.o.lines
+
+	local actual_width_on_create
+	if state.is_full_width then
+		actual_width_on_create = math.floor(screen_width * 0.95)
+	else
+		actual_width_on_create = math.floor(screen_width * config.width)
+	end
+
+	local total_actual_height = math.floor(screen_height * config.height)
+
+	if total_actual_height < 10 then
+		total_actual_height = 10
+	end
+	if actual_width_on_create < 40 then
+		actual_width_on_create = 40
+	end
+
+	local input_actual_height = math.floor(total_actual_height * config.split_ratio)
+	local output_actual_height = total_actual_height - input_actual_height - 1 -- 减去边框和分隔行
+
+	-- 确保输入输出窗口至少有最小高度
+	if input_actual_height < 3 then
+		input_actual_height = 3
+	end
+	if output_actual_height < 3 then
+		output_actual_height = 3
+	end
 
 	-- 重新计算 total_actual_height 以适应调整后的 input/output_actual_height
 	total_actual_height = input_actual_height + output_actual_height + 2
 
 	-- 窗口居中靠右计算
-	local col_start = math.floor((screen_width - actual_width))
+	local col_start = math.floor((screen_width - actual_width_on_create))
 	local row_start = math.floor((screen_height - total_actual_height) / 2)
 
 	state.output_win = vim.api.nvim_open_win(state.output_buf, true, {
 		relative = "editor",
-		width = actual_width,
+		width = actual_width_on_create, -- 使用计算出的宽度
 		height = output_actual_height,
 		col = col_start,
 		row = row_start,
@@ -193,17 +323,17 @@ function M.create(config)
 
 	state.input_win = vim.api.nvim_open_win(state.input_buf, true, {
 		relative = "editor",
-		width = actual_width,
+		width = actual_width_on_create, -- 使用计算出的宽度
 		height = input_actual_height,
 		col = col_start,
 		row = row_start + output_actual_height + 2,
 		border = "single",
-		title = "Input Window（ESC to close, Enter to Submit, Ctrl+J to New Line）",
+		title = "Input Window（ESC to close, Enter to Submit, Shift+Enter/Ctrl+J to New Line）",
 		title_pos = "center",
 	})
 
 	setup_buffers()
-	setup_autocmd()
+	setup_autocmds_for_windows() -- 调用新的 autocmd 设置函数
 
 	-- 滚动到最底部
 	local line_count = vim.api.nvim_buf_line_count(state.output_buf)
@@ -219,7 +349,7 @@ function M.close()
 	vim.notify("Closing Chat Window ...", vim.log.levels.INFO)
 	local current_win = vim.api.nvim_get_current_win()
 	if current_win == state.input_win or current_win == state.output_win then
-		vim.cmd("wincmd p")
+		vim.cmd("wincmd p") -- 切换到其他窗口
 	end
 
 	if state.input_buf and vim.api.nvim_buf_is_valid(state.input_buf) then
@@ -241,6 +371,14 @@ function M.close()
 
 	state.input_win = nil
 	state.output_win = nil
+	state.config = nil -- 清除配置
+	state.is_full_width = false -- 关闭时重置为默认值
+
+	-- 清理自动命令
+	if state.autocmd_group_id then
+		vim.api.nvim_del_augroup_by_id(state.autocmd_group_id)
+		state.autocmd_group_id = nil
+	end
 
 	vim.notify("Chat Window closed", vim.log.levels.INFO)
 end
