@@ -66,7 +66,7 @@ function M.setup(main_plugin)
 		group = ai_chat_augroup,
 		pattern = "*",
 		callback = function()
-			if history_module and type(history.save_history) == "function" then
+			if history_module and type(history_module.save_history) == "function" then
 				history_module.save_history()
 			end
 		end,
