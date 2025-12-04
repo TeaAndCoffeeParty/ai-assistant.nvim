@@ -140,6 +140,7 @@ source ~/.zshrc # 或你的相应文件
 - `:ChatShowHistory`：显示所有聊天会话历史。
 - `:ChatClearHistory`：清除所有已保存的聊天会话历史。
 - `:ChatClearPrompt`：清除当前 AI 聊天输入框中的上下文信息，但不影响已发送的聊天历史。
+- `:ChatClose`：关闭 AI 聊天窗口。
 - `:ChatSelectModel`：弹出一个选择框，让你选择要使用的 AI 模型。
 - `:ChatToggleWidth`： 切换聊天窗口的宽度（宽/窄）。
 
