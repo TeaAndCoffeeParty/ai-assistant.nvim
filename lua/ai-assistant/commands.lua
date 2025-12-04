@@ -26,6 +26,10 @@ function M.setup(main_plugin)
 		P.open_chat_ui()
 	end, { desc = "Show AI Chat Window" })
 
+	vim.api.nvim_create_user_command("ChatClose", function()
+		P.close_windows()
+	end, { desc = "Close AI Chat Window" })
+
 	-- 新增命令: 引用当前行
 	vim.api.nvim_create_user_command("ChatCurrentLine", function()
 		P.chat_with_context("current_line")

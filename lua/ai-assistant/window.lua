@@ -257,7 +257,8 @@ end
 function M.create(config)
 	-- 如果窗口已经存在，则聚焦到输入窗口
 	if state.input_win and vim.api.nvim_win_is_valid(state.input_win) then
-		M.close() -- 先关闭再重新创建，或者直接聚焦
+		vim.api.nvim_set_current_win(state.input_win)
+		vim.cmd("startinsert!")
 		return
 	end
 
