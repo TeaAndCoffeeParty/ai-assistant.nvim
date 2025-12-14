@@ -49,7 +49,7 @@ M.defaults = {
 			api_key = os.getenv("MODELSCOPE_API_KEY"),
 			model = "qwen/qwen3-coder-480b-a35b-instruct",
 			available_models = {
-				"Qwen/Qwen3-Coder-480B-A35B-Instruct",
+				"qwen/qwen3-coder-480b-A35b-instruct",
 			},
 		},
 	},
