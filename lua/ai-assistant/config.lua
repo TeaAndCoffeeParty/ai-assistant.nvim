@@ -44,8 +44,16 @@ M.defaults = {
 				"kimi-k2-0711-preview",
 			},
 		},
+		modelscope = {
+			api_url = "https://api-inference.modelscope.cn/v1/chat/completions",
+			api_key = os.getenv("MODELSCOPE_API_KEY"),
+			model = "qwen/qwen3-coder-480b-a35b-instruct",
+			available_models = {
+				"Qwen/Qwen3-Coder-480B-A35B-Instruct",
+			},
+		},
 	},
-	select_model = "google_gemini",
+	select_model = "modelscope",
 	history = {
 		max_save_count = 20,
 		chat_max_count = 10,
