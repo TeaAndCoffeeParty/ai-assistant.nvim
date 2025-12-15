@@ -50,6 +50,20 @@ M.chat_with_context = function(mode, start_line, end_line)
 	return context.chat_with_context(mode, start_line, end_line)
 end
 
+function M.chat_folder_with_input()
+	-- 使用 vim.ui.input 获取用户输入
+	vim.ui.input({
+		prompt = "Enter folder path (default: current directory): ",
+		default = ".",
+		completion = "dir", -- 启用目录补全
+	}, function(input)
+		if input ~= nil then -- 用户按了 Enter，不是 Esc
+			local folder_path = input ~= "" and input or "."
+			M.chat_with_context("folder_content", folder_path)
+		end
+	end)
+end
+
 function M.select_ai_model()
 	local available_providers = {}
 	for provider_name, _ in pairs(M.config.apis) do

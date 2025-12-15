@@ -57,6 +57,11 @@ function M.setup(main_plugin)
 		P.chat_with_context("visual_selection")
 	end, { range = true, desc = "Send Visual Selection to AI Chat" })
 
+	vim.api.nvim_create_user_command("ChatFolder", function(opts)
+		local folder_path = opts.args ~= "" and opts.args or "."
+		P.chat_with_context("folder_content", folder_path)
+	end, { nargs = "?", desc = "Send all .h/.cpp files from a folder as context to AI Chat" })
+
 	vim.api.nvim_create_user_command("ChatSelectModel", function()
 		P.select_ai_model()
 	end, { desc = "Select AI Model" })
