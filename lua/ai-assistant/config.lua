@@ -11,20 +11,19 @@ M.defaults = {
 		google_gemini = {
 			api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
 			api_key = os.getenv("GEMINI_API_KEY"),
-			model = "gemini-3-flash",
+			model = "gemini-3-flash-preview",
 			available_models = {
-				"gemini-3-flash",
+				"gemini-3-flash-preview",
 				"gemini-2.5-flash",
 			},
 		},
 		aliyun_qwen = {
 			api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
 			api_key = os.getenv("DASHSCOPE_API_KEY"),
-			model = "qwen-plus",
+			model = "qwen3.5-plus",
 			available_models = {
-				"qwen-plus",
-				"qwen-max",
-				"qwen-turbo",
+				"qwen3.5-plus",
+				"qwen3.5-flash",
 			},
 		},
 		deepseek = {
@@ -47,8 +46,9 @@ M.defaults = {
 		modelscope = {
 			api_url = "https://api-inference.modelscope.cn/v1/chat/completions",
 			api_key = os.getenv("MODELSCOPE_API_KEY"),
-			model = "qwen/qwen3-coder-480b-a35b-instruct",
+			model = "deepseek-ai/DeepSeek-V3.2",
 			available_models = {
+				"deepseek-ai/DeepSeek-V3.2",
 				"qwen/qwen3-coder-480b-a35b-instruct",
 			},
 		},
