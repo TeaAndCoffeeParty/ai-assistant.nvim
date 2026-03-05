@@ -11,10 +11,10 @@ M.defaults = {
 		google_gemini = {
 			api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
 			api_key = os.getenv("GEMINI_API_KEY"),
-			model = "gemini-2.5-flash",
+			model = "gemini-3-flash",
 			available_models = {
+				"gemini-3-flash",
 				"gemini-2.5-flash",
-				"gemini-2.5-pro",
 			},
 		},
 		aliyun_qwen = {
