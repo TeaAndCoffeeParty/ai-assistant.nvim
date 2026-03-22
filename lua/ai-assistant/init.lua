@@ -114,8 +114,9 @@ function M.select_ai_model()
 			if selected_model_name then
 				local success, err = config.set_api_model(selected_provider, selected_model_name)
 				if success then
+					config.save_persisted_selection()
 					vim.notify(
-						string.format("AI Model switched to: %s -> %s", selected_provider, selected_model_name),
+						string.format("AI Model switched to: %s -> %s（已保存，下次启动仍有效）", selected_provider, selected_model_name),
 						vim.log.levels.INFO,
 						{ title = "AI Chat" }
 					)
@@ -150,6 +151,7 @@ function M.submit_input()
 	end
 
 	local full_response = ""
+	local full_thinking = ""
 	local messages = history.insertHistory("user", input_data.full_prompt)
 
 	local send_tokens = context.calculate_total_tokens(messages, 4)
@@ -169,16 +171,37 @@ function M.submit_input()
 	end
 
 	window.echo_user_input(input_data.raw_input_lines)
+	window.reset_assistant_stream_kind()
 
 	request_api.query_stream(messages, {
-		on_data = function(content)
-			if content then
+		on_data = function(content, kind)
+			if not content or content == "" then
+				return
+			end
+			if kind == "thinking" then
+				full_thinking = full_thinking .. content
+				window.safe_buf_update(content, "thinking")
+			else
 				full_response = full_response .. content
-				window.safe_buf_update(content)
+				window.safe_buf_update(content, "content")
 			end
 		end,
 		on_finish = function()
-			history.insertHistory("assistant", full_response)
+			if full_response:match("^%s*$") then
+				vim.notify(
+					"模型返回为空。请确认 API、模型名与网络；若服务端返回了 HTTP 非 200，插件现在会提示错误。",
+					vim.log.levels.WARN,
+					{ title = "AI Chat" }
+				)
+			end
+			local hist_assistant = full_response
+			if full_thinking ~= "" then
+				hist_assistant = "**Thinking**\n\n> "
+					.. full_thinking:gsub("\n", "\n> ")
+					.. "\n\n---\n\n"
+					.. full_response
+			end
+			history.insertHistory("assistant", hist_assistant)
 
 			window.safe_buf_update("\n\nTimestamp:" .. os.date("%Y-%m-%d %H:%M:%S"))
 			window.safe_buf_update("\n\n-------------------\n")

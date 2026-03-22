@@ -4,6 +4,44 @@ local json = vim.json
 local api = {}
 local default_timeout = 60000
 
+--- 将 SSE 里 choices[].delta 拆成正文与思考链（分开回调，便于 UI 区分）
+local function stream_delta_parts(delta)
+	if type(delta) ~= "table" then
+		return "", ""
+	end
+	local c = delta.content
+	local content_str = ""
+	if type(c) == "string" then
+		content_str = c
+	elseif type(c) == "table" then
+		local parts = {}
+		if #c > 0 then
+			for _, part in ipairs(c) do
+				if type(part) == "table" and type(part.text) == "string" then
+					table.insert(parts, part.text)
+				elseif type(part) == "string" then
+					table.insert(parts, part)
+				end
+			end
+		elseif type(c.text) == "string" then
+			table.insert(parts, c.text)
+		end
+		content_str = table.concat(parts)
+	elseif type(c) == "number" or type(c) == "boolean" then
+		content_str = tostring(c)
+	end
+
+	local thinking_str = ""
+	for _, key in ipairs({ "reasoning_content", "reasoning", "thinking" }) do
+		local v = delta[key]
+		if type(v) == "string" and v ~= "" then
+			thinking_str = v
+			break
+		end
+	end
+	return content_str, thinking_str
+end
+
 function api.query(prompt, callback)
 	local model = require("ai-assistant").config.get_model
 
@@ -109,35 +147,104 @@ function api.query_stream(messages, callbacks)
 		model_config.api_url,
 	}
 
-	local full_response = ""
+	local http_code ---@type integer|nil
+	local stream_error ---@type string|nil
+	local finish_scheduled = false
+	local stderr_lines = {}
+
+	local function schedule_finish_once()
+		if finish_scheduled then
+			return
+		end
+		finish_scheduled = true
+		vim.schedule(callbacks.on_finish)
+	end
+
+	local function schedule_error_once(msg)
+		if finish_scheduled then
+			return
+		end
+		finish_scheduled = true
+		vim.schedule(function()
+			callbacks.on_error(msg)
+		end)
+	end
+
 	local job_id = vim.fn.jobstart(cmd, {
 		stdout_buffered = false,
+		on_stderr = function(_, data, _)
+			for _, line in ipairs(data) do
+				if line ~= "" then
+					table.insert(stderr_lines, line)
+				end
+			end
+		end,
 		on_stdout = function(_, data, _)
 			for _, line in ipairs(data) do
+				line = line:gsub("\r$", "")
 				if line:find("^data: ") then
-					local chunk = line:sub(6)
+					local chunk = line:sub(7):match("^%s*(.*)$") or line:sub(7)
 					if chunk == "[DONE]" then
-						print("Received DONE signal") -- 调试
-						vim.schedule(callbacks.on_finish)
+						-- 真正结束与 HTTP 校验在 on_exit，避免 curl 退出 0 但 HTTP 4xx/5xx 时仍当作成功
 					else
 						local ok, json_data = pcall(vim.json.decode, chunk)
 						if ok and json_data.choices then
-							callbacks.on_data(json_data.choices[1].delta.content or "")
+							local delta = json_data.choices[1].delta
+							local content_str, thinking_str = stream_delta_parts(delta)
+							if thinking_str ~= "" then
+								callbacks.on_data(thinking_str, "thinking")
+							end
+							if content_str ~= "" then
+								callbacks.on_data(content_str, "content")
+							end
+						elseif ok and json_data.error then
+							local e = json_data.error
+							if type(e) == "table" and e.message then
+								stream_error = tostring(e.message)
+							else
+								stream_error = vim.json.encode(json_data.error)
+							end
 						end
 					end
 				elseif line:find("HTTP_STATUS:") then
-					print("HTTP Status:", line) --调试状态码
+					local code_str = line:match("HTTP_STATUS:(%d+)")
+					if code_str then
+						http_code = tonumber(code_str)
+					end
 				end
 			end
 		end,
 		on_exit = function(_, code, signal)
-			print("Job exited. Code:", code, "Signal:", signal) -- 关键调试信息
 			vim.schedule(function()
-				if code == 0 then
-					callbacks.on_finish()
-				else
-					callbacks.on_error("curl exited with code " .. code)
+				if finish_scheduled then
+					return
 				end
+				if code ~= 0 then
+					local err = "curl exited with code " .. tostring(code)
+					if signal ~= 0 then
+						err = err .. ", signal " .. tostring(signal)
+					end
+					if #stderr_lines > 0 then
+						err = err .. ": " .. table.concat(stderr_lines, " ")
+					end
+					schedule_error_once(err)
+					return
+				end
+				-- curl 对 HTTP 错误默认仍返回 0，必须看 write-out 里的状态码
+				if stream_error then
+					schedule_error_once(stream_error)
+					return
+				end
+				if http_code and http_code ~= 200 then
+					schedule_error_once(
+						string.format(
+							"API HTTP %s（curl 仍为 0）。请检查 api_url、API Key、模型名与额度。",
+							tostring(http_code)
+						)
+					)
+					return
+				end
+				schedule_finish_once()
 			end)
 		end,
 	})
@@ -145,9 +252,8 @@ function api.query_stream(messages, callbacks)
 	-- 超时保险
 	vim.defer_fn(function()
 		if vim.fn.jobwait({ job_id }, 0)[1] == -1 then
-			print("Force stopping job due to timeout")
 			vim.fn.jobstop(job_id)
-			callbacks.on_error("Reqest timeout")
+			schedule_error_once("Request timeout")
 		end
 	end, model_config.timeout or default_timeout)
 end

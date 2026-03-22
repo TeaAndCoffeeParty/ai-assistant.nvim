@@ -10,6 +10,8 @@ local state = {
 	config = nil, -- 保存配置以便重绘时使用
 	autocmd_group_id = nil, -- 用于管理自动命令的ID
 	is_full_width = false, -- 新增：是否当前处于全宽模式 (95%)
+	--- nil | "thinking" | "content"，用于区分流式输出中的思考链与正文
+	assistant_stream_kind = nil,
 }
 
 local function setup_buffers()
@@ -479,9 +481,29 @@ function M.echo_user_input(input)
 	M.safe_buf_update("\n-------------------\n")
 end
 
-function M.safe_buf_update(content)
+--- 新一次助手回复流式输出前调用，避免与上一轮 kind 混在一起
+function M.reset_assistant_stream_kind()
+	state.assistant_stream_kind = nil
+end
+
+--- @param kind? "content"|"thinking" 仅流式 token 传入；时间戳/错误等勿传，以免打乱分区状态
+function M.safe_buf_update(content, kind)
 	if not (vim.api.nvim_win_is_valid(state.output_win) and vim.api.nvim_buf_is_valid(state.output_buf)) then
 		return
+	end
+
+	if kind == "thinking" then
+		if state.assistant_stream_kind ~= "thinking" then
+			content = "\n\n**Thinking**\n\n> " .. content:gsub("\n", "\n> ")
+			state.assistant_stream_kind = "thinking"
+		else
+			content = content:gsub("\n", "\n> ")
+		end
+	elseif kind == "content" then
+		if state.assistant_stream_kind == "thinking" then
+			content = "\n\n**Answer**\n\n" .. content
+		end
+		state.assistant_stream_kind = "content"
 	end
 
 	local output_buf = vim.bo[state.output_buf]

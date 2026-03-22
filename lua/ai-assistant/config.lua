@@ -61,12 +61,88 @@ M.defaults = {
 	max_context_lines = 1000,
 	max_prompt_tokens = 5000,
 	max_prompt_token_ratio = 2, -- English:3.5, Chines 2 or 2.5
+	--- 为 true 时：在 UI 中选择模型后会写入 data 目录，下次启动自动恢复
+	persist_selection = true,
 }
 
 M.config = {}
 
+local function selection_state_path()
+	return vim.fn.stdpath("data") .. "/ai-assistant-selection.json"
+end
+
+--- 从上次会话恢复选中的 provider 与各 API 的 model（仅当 persist_selection 为 true）
+function M.load_persisted_selection()
+	if not M.config.persist_selection then
+		return
+	end
+	local path = selection_state_path()
+	local f = io.open(path, "r")
+	if not f then
+		return
+	end
+	local raw = f:read("*a")
+	f:close()
+	local ok, decoded = pcall(vim.json.decode, raw)
+	if not ok or type(decoded) ~= "table" then
+		return
+	end
+	if type(decoded.select_model) == "string" and M.config.apis[decoded.select_model] then
+		M.config.select_model = decoded.select_model
+	end
+	if type(decoded.api_models) == "table" then
+		for api_name, model_name in pairs(decoded.api_models) do
+			local api_conf = M.config.apis[api_name]
+			if api_conf and type(model_name) == "string" and api_conf.available_models then
+				local found = false
+				for _, available_m in ipairs(api_conf.available_models) do
+					if available_m == model_name then
+						found = true
+						break
+					end
+				end
+				if found then
+					api_conf.model = model_name
+				end
+			end
+		end
+	end
+end
+
+--- 将当前 select_model 与各 apis.*.model 写入磁盘
+function M.save_persisted_selection()
+	if not M.config.persist_selection then
+		return
+	end
+	local api_models = {}
+	for api_name, api_conf in pairs(M.config.apis) do
+		if type(api_conf.model) == "string" and api_conf.model ~= "" then
+			api_models[api_name] = api_conf.model
+		end
+	end
+	local payload = vim.json.encode({
+		select_model = M.config.select_model,
+		api_models = api_models,
+	})
+	local path = selection_state_path()
+	vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
+	local f, open_err = io.open(path, "w")
+	if not f then
+		vim.notify(
+			"无法保存模型选择: " .. tostring(open_err or path),
+			vim.log.levels.WARN,
+			{ title = "AI Chat" }
+		)
+		return
+	end
+	f:write(payload)
+	f:close()
+end
+
 function M.setup(opts)
 	M.config = vim.tbl_deep_extend("force", {}, M.defaults, opts or {})
+
+	M.load_persisted_selection()
 
 	-- 确保每个API的默认模型在可用模型列表中
 	for api_name, api_conf in pairs(M.config.apis) do
