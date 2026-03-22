@@ -3,9 +3,14 @@ local M = {}
 M.defaults = {
 	enabled = true,
 	window = {
+		--- "split"：右侧固定列宽分栏（类似 Cursor 侧栏，用 Ctrl-w w 与编辑区切换）
+		--- "float"：居中靠右的浮动窗口（旧版行为）
+		layout = "split",
+		--- layout 为 split 时侧栏宽度（列数 / characters）
+		sidebar_width = 80,
 		width = 0.6,
 		height = 0.8,
-		split_ratio = 0.2,
+		split_ratio = 0.22,
 	},
 	apis = {
 		google_gemini = {

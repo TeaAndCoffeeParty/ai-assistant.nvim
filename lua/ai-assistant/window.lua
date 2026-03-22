@@ -10,6 +10,10 @@ local state = {
 	config = nil, -- 保存配置以便重绘时使用
 	autocmd_group_id = nil, -- 用于管理自动命令的ID
 	is_full_width = false, -- 新增：是否当前处于全宽模式 (95%)
+	--- true：右侧 vsplit；false：浮动窗
+	is_split_layout = false,
+	--- 打开 AI 前的窗口，关闭时尝试还原焦点
+	back_win = nil,
 	--- nil | "thinking" | "content"，用于区分流式输出中的思考链与正文
 	assistant_stream_kind = nil,
 }
@@ -32,7 +36,11 @@ local function setup_buffers()
 	input_win_obj.number = false
 	input_win_obj.relativenumber = false
 	input_win_obj.wrap = true
-	input_win_obj.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
+	if state.is_split_layout then
+		input_win_obj.winhighlight = "Normal:Normal"
+	else
+		input_win_obj.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
+	end
 
 	-- 输出缓冲区设置
 	output_buf_obj.buftype = "nofile"
@@ -46,7 +54,15 @@ local function setup_buffers()
 	output_win_obj.number = false
 	output_win_obj.relativenumber = false
 	output_win_obj.wrap = true
-	output_win_obj.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
+	if state.is_split_layout then
+		output_win_obj.winhighlight = "Normal:Normal"
+	else
+		output_win_obj.winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
+	end
+	if state.is_split_layout then
+		pcall(vim.api.nvim_win_set_option, state.output_win, "winbar", " AI · 输出 ")
+		pcall(vim.api.nvim_win_set_option, state.input_win, "winbar", " AI · 输入 ")
+	end
 
 	-- 设置初始内容
 	if state.cached_content then
@@ -182,6 +198,35 @@ function M.resize_windows()
 	local screen_width = vim.o.columns
 	local screen_height = vim.o.lines
 
+	if state.is_split_layout then
+		local sidebar_w = state.is_full_width and math.floor(screen_width * 0.95)
+			or math.max(40, math.min(config.sidebar_width or 80, screen_width - 10))
+		local avail_h = screen_height - vim.o.cmdheight - 1
+		if avail_h < 10 then
+			avail_h = 10
+		end
+		local input_actual_height = math.max(3, math.floor(avail_h * config.split_ratio))
+		local output_actual_height = math.max(3, avail_h - input_actual_height)
+		if output_actual_height < 3 then
+			output_actual_height = 3
+			input_actual_height = math.max(3, avail_h - output_actual_height)
+		end
+		vim.api.nvim_win_call(state.output_win, function()
+			vim.api.nvim_win_set_width(0, sidebar_w)
+		end)
+		vim.api.nvim_win_call(state.output_win, function()
+			vim.api.nvim_win_set_height(0, output_actual_height)
+		end)
+		vim.api.nvim_win_call(state.input_win, function()
+			vim.api.nvim_win_set_height(0, input_actual_height)
+		end)
+		local line_count = vim.api.nvim_buf_line_count(state.output_buf)
+		vim.api.nvim_win_set_cursor(state.output_win, { line_count, 0 })
+		vim.api.nvim_set_current_win(state.input_win)
+		vim.cmd("startinsert!")
+		return
+	end
+
 	local actual_width
 	if state.is_full_width then
 		actual_width = math.floor(screen_width * 0.95) -- 95% 宽度
@@ -251,7 +296,12 @@ function M.toggle_width()
 	state.is_full_width = not state.is_full_width -- 切换状态
 	M.resize_windows() -- 触发重绘
 
-	local width_desc = state.is_full_width and "95%" or "configured (" .. (state.config.width * 100) .. "%)"
+	local width_desc
+	if state.is_split_layout then
+		width_desc = state.is_full_width and "95% 屏宽" or (tostring(state.config.sidebar_width or 80) .. " 列")
+	else
+		width_desc = state.is_full_width and "95%" or "configured (" .. (state.config.width * 100) .. "%)"
+	end
 	vim.notify("AI Assistant width toggled to " .. width_desc, vim.log.levels.INFO)
 end
 
@@ -266,6 +316,7 @@ function M.create(config)
 
 	state.config = config -- 保存配置
 	state.is_full_width = false -- 默认以配置宽度打开
+	state.back_win = vim.api.nvim_get_current_win()
 
 	-- 创建两个缓冲区
 	if not state.output_buf or not vim.api.nvim_buf_is_valid(state.output_buf) then
@@ -275,7 +326,26 @@ function M.create(config)
 		state.input_buf = vim.api.nvim_create_buf(false, true)
 	end
 
-	-- 初次创建时，根据 is_full_width 决定宽度
+	local layout = config.layout or "split"
+	if layout == "split" then
+		state.is_split_layout = true
+		vim.cmd("vertical botright new")
+		local sidebar_w = math.max(40, math.min(config.sidebar_width or 80, vim.o.columns - 10))
+		vim.cmd("vertical resize " .. sidebar_w)
+		vim.api.nvim_win_set_buf(0, state.output_buf)
+		state.output_win = vim.api.nvim_get_current_win()
+		vim.cmd("rightbelow split")
+		state.input_win = vim.api.nvim_get_current_win()
+		vim.api.nvim_win_set_buf(0, state.input_buf)
+		setup_buffers()
+		setup_autocmds_for_windows()
+		M.resize_windows()
+		return state
+	end
+
+	state.is_split_layout = false
+
+	-- 初次创建时，根据 is_full_width 决定宽度（浮动布局）
 	local screen_width = vim.o.columns
 	local screen_height = vim.o.lines
 
@@ -350,9 +420,14 @@ end
 
 function M.close()
 	vim.notify("Closing Chat Window ...", vim.log.levels.INFO)
+	local restore_win = state.back_win
 	local current_win = vim.api.nvim_get_current_win()
 	if current_win == state.input_win or current_win == state.output_win then
-		vim.cmd("wincmd p") -- 切换到其他窗口
+		if restore_win and vim.api.nvim_win_is_valid(restore_win) then
+			vim.api.nvim_set_current_win(restore_win)
+		else
+			vim.cmd("wincmd p") -- 切换到其他窗口
+		end
 	end
 
 	if state.input_buf and vim.api.nvim_buf_is_valid(state.input_buf) then
@@ -376,6 +451,8 @@ function M.close()
 	state.output_win = nil
 	state.config = nil -- 清除配置
 	state.is_full_width = false -- 关闭时重置为默认值
+	state.is_split_layout = false
+	state.back_win = nil
 
 	-- 清理自动命令
 	if state.autocmd_group_id then
