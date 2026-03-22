@@ -62,6 +62,8 @@ M.defaults = {
 	history = {
 		max_save_count = 20,
 		chat_max_count = 10,
+		--- 为 true：每次启动加载 ai_chat_history.json 后，不把旧对话发给 API（等同 :ChatClearPrompt），避免换模型后人设仍被旧 assistant 带偏
+		isolate_context_after_load = false,
 	},
 	max_context_lines = 1000,
 	max_prompt_tokens = 5000,

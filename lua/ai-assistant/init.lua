@@ -35,6 +35,14 @@ function M.setup(opts)
 	commands.setup(M)
 
 	history.load_history()
+	if M.config.history.isolate_context_after_load then
+		history.resetPromptContext({ silent = true })
+		vim.notify(
+			"已按配置重置发给 API 的上下文（磁盘里的旧对话不会参与请求）。",
+			vim.log.levels.INFO,
+			{ title = "AI Chat" }
+		)
+	end
 
 	context.setup(M, window)
 	-- 在这里添加你的插件逻辑
@@ -88,6 +96,12 @@ function M.select_ai_model()
 			return
 		end
 
+		local prev_provider = M.config.select_model
+		local prev_model = nil
+		if prev_provider and M.config.apis[prev_provider] then
+			prev_model = M.config.apis[prev_provider].model
+		end
+
 		-- Update the globally selected provider first
 		M.config.select_model = selected_provider
 
@@ -115,11 +129,12 @@ function M.select_ai_model()
 				local success, err = config.set_api_model(selected_provider, selected_model_name)
 				if success then
 					config.save_persisted_selection()
-					vim.notify(
-						string.format("AI Model switched to: %s -> %s（已保存，下次启动仍有效）", selected_provider, selected_model_name),
-						vim.log.levels.INFO,
-						{ title = "AI Chat" }
-					)
+					local msg = string.format("已切换为 %s → %s（已写入配置）", selected_provider, selected_model_name)
+					if prev_provider ~= selected_provider or prev_model ~= selected_model_name then
+						history.resetPromptContext({ silent = true })
+						msg = msg .. "\n已重置「发给 API 的上下文」，避免旧对话里其它模型的人设影响当前模型。"
+					end
+					vim.notify(msg, vim.log.levels.INFO, { title = "AI Chat" })
 				else
 					vim.notify(
 						string.format("Failed to set model for %s: %s", selected_provider, err),

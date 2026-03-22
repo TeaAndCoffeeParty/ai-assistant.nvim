@@ -43,7 +43,11 @@ local function stream_delta_parts(delta)
 end
 
 function api.query(prompt, callback)
-	local model = require("ai-assistant").config.get_model
+	local model, gerr = require("ai-assistant.config").get_model()
+	if gerr or not model then
+		vim.notify("Chat API config: " .. tostring(gerr or "nil"), vim.log.levels.ERROR)
+		return
+	end
 
 	if not model.api_key then
 		vim.notify("Chat API Key Not Found", vim.log.levels.ERROR)
@@ -122,9 +126,8 @@ function api.query_stream(messages, callbacks)
 		stream = true, -- 开启流式传输
 	})
 
-	-- 调试信息
-	-- print("Starting stream request to:", model.api_url)
-	vim.notify("Querying " .. model_config.model .. "...", vim.log.levels.INFO)
+	local prov = require("ai-assistant.config").config.select_model or "?"
+	vim.notify(string.format("请求 [%s] 模型 %s …", prov, model_config.model), vim.log.levels.INFO)
 
 	local cmd = {
 		"curl",

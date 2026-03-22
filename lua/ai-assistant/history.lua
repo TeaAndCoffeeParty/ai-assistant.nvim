@@ -259,10 +259,14 @@ end
 --- 重置发送给 AI 的提示上下文。
 -- 将上下文指针设置到当前历史记录的下一个位置，使得下一次只发送新消息。
 -- 如果历史窗口是打开的，则更新其内容以反映此状态。
-function M.resetPromptContext()
+--- @param opts? { silent?: boolean }
+function M.resetPromptContext(opts)
+	opts = opts or {}
 	-- 将指针设置到当前历史记录的下一个位置，使得下一次只发送新消息
 	M.context_start_index = #M.chat_history + 1
-	vim.notify("AI prompt context has been reset for the next interaction.", vim.log.levels.INFO)
+	if not opts.silent then
+		vim.notify("AI prompt context has been reset for the next interaction.", vim.log.levels.INFO)
+	end
 
 	-- 如果历史窗口是打开的，就更新它以反映这个状态
 	update_history_window_content()
