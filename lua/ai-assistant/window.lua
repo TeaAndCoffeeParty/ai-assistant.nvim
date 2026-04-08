@@ -329,14 +329,14 @@ function M.create(config)
 	local layout = config.layout or "split"
 	if layout == "split" then
 		state.is_split_layout = true
-		vim.cmd("vertical botright new")
 		local sidebar_w = math.max(40, math.min(config.sidebar_width or 80, vim.o.columns - 10))
-		vim.cmd("vertical resize " .. sidebar_w)
-		vim.api.nvim_win_set_buf(0, state.output_buf)
-		state.output_win = vim.api.nvim_get_current_win()
-		vim.cmd("rightbelow split")
-		state.input_win = vim.api.nvim_get_current_win()
-		vim.api.nvim_win_set_buf(0, state.input_buf)
+		state.output_win = vim.api.nvim_open_win(state.output_buf, true, {
+			split = "right",
+			width = sidebar_w,
+		})
+		state.input_win = vim.api.nvim_open_win(state.input_buf, true, {
+			split = "below",
+		})
 		setup_buffers()
 		setup_autocmds_for_windows()
 		M.resize_windows()
