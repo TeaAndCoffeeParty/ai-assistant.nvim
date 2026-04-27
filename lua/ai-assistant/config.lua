@@ -18,7 +18,6 @@ M.defaults = {
 			api_key = os.getenv("GEMINI_API_KEY"),
 			model = "gemini-3-flash-preview",
 			available_models = {
-				"gemini-3-flash-preview",
 				"gemini-2.5-flash",
 			},
 		},
@@ -31,21 +30,31 @@ M.defaults = {
 				"qwen3.5-flash",
 			},
 		},
+		--- 文档：https://api-docs.deepseek.com/zh-cn/（OpenAI 兼容，base 为 https://api.deepseek.com）
 		deepseek = {
 			api_url = "https://api.deepseek.com/v1/chat/completions",
 			api_key = os.getenv("DEEPSEEK_API_KEY"),
-			model = "deepseek-chat",
+			--- 新模型名；deepseek-chat / deepseek-reasoner 将于 2026-07-24 弃用
+			model = "deepseek-v4-flash",
 			available_models = {
+				"deepseek-v4-flash",
+				"deepseek-v4-pro",
 				"deepseek-chat",
-				"deepseek-coder",
+				"deepseek-reasoner",
 			},
+			--- 仅 DeepSeek 官方 API 支持；其它厂商勿设这些字段（插件只在 thinking_enabled 为 true 时写入 JSON）
+			supports_thinking = true,
+			--- 为 true 时在请求体中加入 thinking + reasoning_effort（见官方「思考模式」）
+			thinking_enabled = false,
+			thinking = { type = "enabled" },
+			reasoning_effort = "medium", --- "low" | "medium" | "high"
 		},
 		moonshot = {
 			api_url = "https://api.moonshot.cn/v1/chat/completions",
 			api_key = os.getenv("MOONSHOT_API_KEY"),
 			model = "kimi-k2-0711-preview",
 			available_models = {
-				"kimi-k2-0711-preview",
+				"kimi-k2.5",
 			},
 		},
 		modelscope = {
@@ -54,7 +63,7 @@ M.defaults = {
 			model = "deepseek-ai/DeepSeek-V3.2",
 			available_models = {
 				"deepseek-ai/DeepSeek-V3.2",
-				"qwen/qwen3-coder-480b-a35b-instruct",
+				"ZhipuAI/GLM-5.1",
 			},
 		},
 	},

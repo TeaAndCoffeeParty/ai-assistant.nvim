@@ -42,6 +42,18 @@ local function stream_delta_parts(delta)
 	return content_str, thinking_str
 end
 
+--- 仅当配置显式开启时附加（当前仅 DeepSeek 文档中的 thinking / reasoning_effort）
+---@param body table 将编码为 JSON 的请求体
+---@param model_config table
+local function apply_thinking_fields(body, model_config)
+	if model_config.thinking_enabled == true then
+		body.thinking = vim.tbl_extend("force", {}, model_config.thinking or { type = "enabled" })
+		if model_config.reasoning_effort then
+			body.reasoning_effort = model_config.reasoning_effort
+		end
+	end
+end
+
 function api.query(prompt, callback)
 	local model, gerr = require("ai-assistant.config").get_model()
 	if gerr or not model then
@@ -55,7 +67,7 @@ function api.query(prompt, callback)
 	end
 
 	local request_data = {
-		model = model.model or "deepseek-chat",
+		model = model.model or "deepseek-v4-flash",
 		messages = {
 			{
 				role = "user",
@@ -65,6 +77,7 @@ function api.query(prompt, callback)
 		temperature = 0.7,
 		stream = false,
 	}
+	apply_thinking_fields(request_data, model)
 
 	local ok, response = pcall(curl.request, {
 		url = model.api_url or "https://api.deepseek.com/v1/chat/completions",
@@ -119,12 +132,14 @@ function api.query_stream(messages, callbacks)
 		return
 	end
 
-	local payload = vim.json.encode({
+	local body = {
 		model = model_config.model,
 		messages = messages,
 		temperature = 0.7,
-		stream = true, -- 开启流式传输
-	})
+		stream = true,
+	}
+	apply_thinking_fields(body, model_config)
+	local payload = vim.json.encode(body)
 
 	local prov = require("ai-assistant.config").config.select_model or "?"
 	vim.notify(string.format("请求 [%s] 模型 %s …", prov, model_config.model), vim.log.levels.INFO)

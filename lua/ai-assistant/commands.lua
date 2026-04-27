@@ -70,6 +70,28 @@ function M.setup(main_plugin)
 		window_module.toggle_width()
 	end, { desc = "Toggle AI Chat Window Width (Configured / 95%)" })
 
+	vim.api.nvim_create_user_command("ChatToggleThinking", function()
+		local cfg = P.config
+		local name = cfg.select_model
+		local api = name and cfg.apis[name]
+		if not api or not api.supports_thinking then
+			vim.notify(
+				"当前提供商「"
+					.. tostring(name)
+					.. "」未启用 thinking（仅 DeepSeek 等可在 apis.* 中设 supports_thinking = true）",
+				vim.log.levels.WARN,
+				{ title = "AI Chat" }
+			)
+			return
+		end
+		api.thinking_enabled = not api.thinking_enabled
+		vim.notify(
+			string.format("[%s] thinking 已%s（reasoning_effort=%s）", name, api.thinking_enabled and "开启" or "关闭", tostring(api.reasoning_effort or "?")),
+			vim.log.levels.INFO,
+			{ title = "AI Chat" }
+		)
+	end, { desc = "Toggle DeepSeek thinking 请求体（需 apis.supports_thinking）" })
+
 	local ai_chat_augroup = vim.api.nvim_create_augroup("AiChatHistory", { clear = true })
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		group = ai_chat_augroup,
