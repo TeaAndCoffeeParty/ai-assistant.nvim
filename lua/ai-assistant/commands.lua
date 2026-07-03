@@ -92,6 +92,11 @@ function M.setup(main_plugin)
 		)
 	end, { desc = "Toggle DeepSeek thinking 请求体（需 apis.supports_thinking）" })
 
+	vim.api.nvim_create_user_command("ChatCommit", function()
+		local commit = require("ai-assistant.commit")
+		commit.generate()
+	end, { desc = "根据暂存区 diff 生成 conventional commits 提交消息" })
+
 	local ai_chat_augroup = vim.api.nvim_create_augroup("AiChatHistory", { clear = true })
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		group = ai_chat_augroup,
