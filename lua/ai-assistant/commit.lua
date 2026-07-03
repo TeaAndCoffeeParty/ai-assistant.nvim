@@ -1,6 +1,6 @@
 local M = {}
 
-local api = require("ai-assistant.api")
+local config = require("ai-assistant.config")
 
 --- 获取 git 仓库根目录
 ---@return string|nil
@@ -79,17 +79,45 @@ local function build_prompt(staged_diff, unstaged_diff)
 	return prompt
 end
 
---- 清理 AI 回复中的多余标记
+--- 清理 AI 回复：去除代码围栏标记、压缩连续空行、去除首尾空行
 ---@param raw string
 ---@return string
 local function clean_commit_message(raw)
-	local msg = raw
-		:gsub("^```[^\n]*\n", "") -- 移除开头代码围栏
-		:gsub("\n```$", "") -- 移除结尾代码围栏
-		:gsub("^%s+", "") -- 去除开头空白
-		:gsub("%s+$", "") -- 去除结尾空白
+	-- 去除开头的代码围栏标记
+	local msg = raw:gsub("^```[^\n]*\n", "")
+	-- 去除结尾的代码围栏标记
+	msg = msg:gsub("\n```%s*$", "")
 
-	return msg
+	-- 按行拆分，逐行处理空行
+	local lines = vim.split(msg, "\n")
+
+	-- 找到第一个非空行和最后一个非空行，裁剪首尾空行
+	local first, last = 1, #lines
+	while first <= #lines and lines[first]:match("^%s*$") do
+		first = first + 1
+	end
+	while last >= first and lines[last]:match("^%s*$") do
+		last = last - 1
+	end
+
+	-- 重建行列表，压缩连续空行为单个空行
+	local cleaned = {}
+	local prev_empty = false
+	for i = first, last do
+		local is_empty = lines[i]:match("^%s*$") ~= nil
+		if is_empty then
+			if not prev_empty then
+				table.insert(cleaned, "")
+				prev_empty = true
+			end
+			-- 连续空行：跳过
+		else
+			table.insert(cleaned, lines[i])
+			prev_empty = false
+		end
+	end
+
+	return table.concat(cleaned, "\n")
 end
 
 --- 处理生成的提交消息：保存到 COMMIT_EDITMSG + 剪贴板
@@ -131,6 +159,156 @@ local function handle_commit_message(commit_msg, git_root)
 	})
 end
 
+--- 异步调用 AI API（用 vim.fn.jobstart 避免阻塞 UI）
+---@param messages table 消息列表
+---@param callbacks {on_finish: fun(response:string), on_error: fun(msg:string)}
+local function query_async(messages, callbacks)
+	local model_config, err = config.get_model()
+
+	if err or not model_config then
+		vim.schedule(function()
+			callbacks.on_error("获取模型配置失败: " .. (err or "未知错误"))
+		end)
+		return
+	end
+	if not model_config.api_key then
+		vim.schedule(function()
+			callbacks.on_error("API Key 未设置: " .. tostring(model_config.model))
+		end)
+		return
+	end
+
+	local body = {
+		model = model_config.model,
+		messages = messages,
+		temperature = 0.3, -- 提交消息用较低温度，更稳定
+		stream = false,
+	}
+
+	-- DeepSeek thinking 等扩展字段
+	if model_config.thinking_enabled == true then
+		body.thinking = vim.deepcopy(model_config.thinking or { type = "enabled" })
+		if model_config.reasoning_effort then
+			body.reasoning_effort = model_config.reasoning_effort
+		end
+	end
+
+	local payload = vim.json.encode(body)
+
+	local cmd = {
+		"curl",
+		"-sS", -- -S: 出错时显示错误信息
+		"--no-buffer",
+		"-X",
+		"POST",
+		"-H",
+		"Content-Type: application/json",
+		"-H",
+		"Authorization: Bearer " .. model_config.api_key,
+		"--write-out",
+		"HTTP_STATUS:%{http_code}",
+		"--data",
+		payload,
+		model_config.api_url,
+	}
+
+	local stdout_lines = {}
+	local stderr_lines = {}
+	local http_code = nil
+	local finished = false
+
+	local function finish_with_error(msg)
+		if finished then
+			return
+		end
+		finished = true
+		vim.schedule(function()
+			callbacks.on_error(msg)
+		end)
+	end
+
+	local function finish_with_success(body_str)
+		if finished then
+			return
+		end
+		finished = true
+		vim.schedule(function()
+			callbacks.on_finish(body_str)
+		end)
+	end
+
+	vim.fn.jobstart(cmd, {
+		stdout_buffered = false,
+		on_stderr = function(_, data, _)
+			for _, line in ipairs(data) do
+				if line ~= "" then
+					table.insert(stderr_lines, line)
+				end
+			end
+		end,
+		on_stdout = function(_, data, _)
+			for _, line in ipairs(data) do
+				-- 捕获 write-out 状态码
+				if line:find("HTTP_STATUS:") then
+					local code_str = line:match("HTTP_STATUS:(%d+)")
+					if code_str then
+						http_code = tonumber(code_str)
+					end
+				else
+					table.insert(stdout_lines, line)
+				end
+			end
+		end,
+		on_exit = function(_, code, signal)
+			if code ~= 0 then
+				local err = "curl 退出码 " .. tostring(code)
+				if signal ~= 0 then
+					err = err .. ", 信号 " .. tostring(signal)
+				end
+				if #stderr_lines > 0 then
+					err = err .. ": " .. table.concat(stderr_lines, " ")
+				end
+				finish_with_error(err)
+				return
+			end
+
+			local body_str = table.concat(stdout_lines, "\n")
+
+			-- curl 即使 HTTP 错误也返回 0，必须检查 write-out 状态码
+			if http_code and http_code ~= 200 then
+				-- 尝试解析错误详情
+				local err_detail = ""
+				local ok, parsed = pcall(vim.json.decode, body_str)
+				if ok and parsed and parsed.error then
+					err_detail = " - " .. tostring(parsed.error.message or parsed.error)
+				end
+				finish_with_error(string.format("API HTTP %d%s", http_code, err_detail))
+				return
+			end
+
+			if body_str == "" then
+				finish_with_error("API 返回了空响应")
+				return
+			end
+
+			-- 解析 JSON 响应
+			local ok, result = pcall(vim.json.decode, body_str)
+			if not ok or not result.choices or not result.choices[1] then
+				finish_with_error("无法解析 API 响应: " .. body_str:sub(1, 200))
+				return
+			end
+
+			local content = result.choices[1].message.content
+			if not content or content == "" then
+				finish_with_error("API 返回的消息内容为空")
+				return
+			end
+
+			finish_with_success(content)
+		end,
+	})
+end
+
 --- 入口：生成提交消息
 function M.generate()
 	local git_root = get_git_root()
@@ -148,11 +326,16 @@ function M.generate()
 
 	vim.notify("正在请求 AI 生成提交消息…", vim.log.levels.INFO, { title = "ChatCommit" })
 
-	api.query(prompt, function(response)
-		if response then
+	query_async({
+		{ role = "user", content = prompt },
+	}, {
+		on_finish = function(response)
 			handle_commit_message(response, git_root)
-		end
-	end)
+		end,
+		on_error = function(err_msg)
+			vim.notify("ChatCommit 失败: " .. err_msg, vim.log.levels.ERROR, { title = "ChatCommit" })
+		end,
+	})
 end
 
 return M
