@@ -23,13 +23,79 @@ function M.setup(opts)
 		error("Get Model Config Failed: " .. (err or "Unkown Error"))
 	end
 
-	-- 关键配置验证
-	assert(
-		type(model_config.api_key) == "string" and #model_config.api_key > 0,
-		"Pleae Config AI Chat API Key(setup() or get environment API KEY)"
-	)
-	assert(model_config.api_url, "Please Config api_url")
-	assert(model_config.model, "Please Config model")
+	-- 扫描所有 provider，找出「可用」的（api_key + api_url + model 都配了）
+	local available_providers = {}
+	local missing_current = {}
+	for name, api_conf in pairs(M.config.apis) do
+		local ok = true
+		if not (type(api_conf.api_key) == "string" and #api_conf.api_key > 0) then
+			ok = false
+			if name == M.config.select_model then
+				table.insert(missing_current, "api_key 未设置")
+			end
+		end
+		if not api_conf.api_url then
+			ok = false
+			if name == M.config.select_model then
+				table.insert(missing_current, "api_url 未配置")
+			end
+		end
+		if not api_conf.model then
+			ok = false
+			if name == M.config.select_model then
+				table.insert(missing_current, "model 未配置")
+			end
+		end
+		if ok then
+			table.insert(available_providers, name)
+		end
+	end
+
+	-- 当前选中的 provider 配置不完整：尝试自动切换到一个可用的
+	if #missing_current > 0 then
+		local old_provider = M.config.select_model
+		if #available_providers > 0 then
+			-- 自动切换到第一个可用的 provider
+			local fallback = available_providers[1]
+			M.config.select_model = fallback
+			model_config = M.config.apis[fallback]
+			vim.notify(
+				string.format(
+					"当前 provider [%s] 配置不全（%s），已自动切换为 [%s] → %s。可用 :AiSelectModel 手动切换。",
+					old_provider,
+					table.concat(missing_current, "、"),
+					fallback,
+					model_config.model
+				),
+				vim.log.levels.WARN,
+				{ title = "AI Chat" }
+			)
+		else
+			-- 没有任何可用的 provider，发出警告但不阻断加载
+			vim.notify(
+				string.format(
+					"当前 provider [%s] 配置不全（%s），且未检测到其它可用的 provider。\n"
+						.. "请设置至少一个 provider 的 api_key（环境变量或在 setup() 中传入），然后用 :AiSelectModel 切换。",
+					M.config.select_model,
+					table.concat(missing_current, "、")
+				),
+				vim.log.levels.WARN,
+				{ title = "AI Chat" }
+			)
+		end
+	elseif #available_providers > 1 then
+		-- 当前 provider 配置完整，且还有其他可用 provider，静默加载
+		vim.notify(
+			string.format(
+				"当前 [%s] → %s（另有 %d 个可用 provider，:AiSelectModel 切换）",
+				M.config.select_model,
+				model_config.model,
+				#available_providers - 1
+			),
+			vim.log.levels.INFO,
+			{ title = "AI Chat" }
+		)
+	end
 
 	-- 设置快捷键,命令
 	commands.setup(M)

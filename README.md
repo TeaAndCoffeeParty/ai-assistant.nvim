@@ -135,6 +135,7 @@ export MODELSCOPE_API_KEY="..."
 | `:ChatSelectModel` | 选择 provider 与模型；成功后会写入选择缓存，并在切换 provider/模型时尝试重置 API 上下文 |
 | `:ChatToggleWidth` | 侧栏：常规列宽 ↔ 约 95% 屏宽；浮动：配置比例 ↔ 95% |
 | `:ChatToggleThinking` | 仅当当前 `apis` 项带 `supports_thinking` 时切换 `thinking_enabled`（默认仅 DeepSeek） |
+| `:ChatCommit` | 获取 git 暂存区 diff，调用 AI 生成 conventional commits 提交消息，写入 COMMIT_EDITMSG + 剪贴板 |
 | `:AIMapGenerate` | 生成/刷新 C++ 代码地图（需 clangd、`compile_commands.json`） |
 | `:AIMapClear` | 删除地图内存与磁盘缓存 |
 | `:AIMapStatus` | 当前项目根下是否有有效地图缓存 |
