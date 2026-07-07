@@ -62,9 +62,10 @@ M.defaults = {
 		modelscope = {
 			api_url = "https://api-inference.modelscope.cn/v1/chat/completions",
 			api_key = os.getenv("MODELSCOPE_API_KEY"),
-			model = "deepseek-ai/DeepSeek-V3.2",
+			model = "deepseek-ai/DeepSeek-V4-Flash",
 			available_models = {
-				"deepseek-ai/DeepSeek-V3.2",
+				"deepseek-ai/DeepSeek-V4-Flash",
+				"deepseek-ai/DeepSeek-V4-Pro",
 				"ZhipuAI/GLM-5.1",
 			},
 		},
